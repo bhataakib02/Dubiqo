@@ -1,69 +1,65 @@
-import { Link } from "react-router-dom";
-import { Layout } from "@/components/layout/Layout";
-import { Section, SectionHeader } from "@/components/ui/section";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ArrowRight,
-  Target,
-  Heart,
-  Lightbulb,
-  Users,
-  Award,
-  Globe,
-} from "lucide-react";
+import { Link } from 'react-router-dom';
+import { Layout } from '@/components/layout/Layout';
+import { Section, SectionHeader } from '@/components/ui/section';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowRight, Target, Heart, Lightbulb, Users, Award, Globe } from 'lucide-react';
 
 const values = [
   {
     icon: Target,
-    title: "Excellence",
+    title: 'Excellence',
     description: "We don't settle for good enough. Every project gets our best work.",
   },
   {
     icon: Heart,
-    title: "Client First",
+    title: 'Client First',
     description: "Your success is our success. We're partners, not just vendors.",
   },
   {
     icon: Lightbulb,
-    title: "Innovation",
-    description: "We stay ahead of trends to give you cutting-edge solutions.",
+    title: 'Innovation',
+    description: 'We stay ahead of trends to give you cutting-edge solutions.',
   },
   {
     icon: Users,
-    title: "Collaboration",
-    description: "Open communication and teamwork drive every project.",
+    title: 'Collaboration',
+    description: 'Open communication and teamwork drive every project.',
   },
 ];
 
 const team = [
   {
-    name: "Shayam Ahmad",
-    role: "Founder & Lead Developer",
-    image: "https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg",
+    name: 'Shayam Ahmad',
+    role: 'Founder & Lead Developer',
+    image:
+      'https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg',
   },
   {
-    name: "Mohammad Aakib Bhat",
-    role: "Co-Founder & Lead Developer",
-    image: "https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg",
+    name: 'Mohammad Aakib Bhat',
+    role: 'Co-Founder & Lead Developer',
+    image:
+      'https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg',
   },
   {
-    name: "Jan Adnan Farooq",
-    role: "Design Director",
-    image: "https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg",
+    name: 'Jan Adnan Farooq',
+    role: 'Design Director',
+    image:
+      'https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg',
   },
   {
-    name: "Haroon Iqbal",
-    role: "Project Manager",
-    image: "https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg",
+    name: 'Haroon Iqbal',
+    role: 'Project Manager',
+    image:
+      'https://icon2.cleanpng.com/20180505/khw/kisspng-emojipedia-noto-fonts-emoticon-iphone-5aee006286ec14.9545327215255471065526.jpg',
   },
 ];
 
 const stats = [
-  { value: "150+", label: "Projects Completed" },
-  { value: "50+", label: "Happy Clients" },
-  { value: "5+", label: "Years Experience" },
-  { value: "12", label: "Countries Served" },
+  { value: '150+', label: 'Projects Completed' },
+  { value: '50+', label: 'Happy Clients' },
+  { value: '5+', label: 'Years Experience' },
+  { value: '12', label: 'Countries Served' },
 ];
 
 export default function About() {
@@ -73,15 +69,15 @@ export default function About() {
       <section className="pt-32 pb-16 relative overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-20" />
         <div className="absolute top-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full blur-[100px]" />
-        
+
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
               About <span className="gradient-text">Dubiqo</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              We're a team of passionate developers and designers building
-              digital solutions that make a difference.
+              We're a team of passionate developers and designers building digital solutions that
+              make a difference.
             </p>
           </div>
         </div>
@@ -95,20 +91,18 @@ export default function About() {
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Our Story</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
-                  Dubiqo was born from a simple observation: too many businesses
-                  struggle with outdated, poorly designed websites that hurt their
-                  growth potential.
+                  Dubiqo was born from a simple observation: too many businesses struggle with
+                  outdated, poorly designed websites that hurt their growth potential.
                 </p>
                 <p>
-                  Founded in 2025, we set out to change that. Our mission is to
-                  democratize access to high-quality web development, making it
-                  accessible to startups, freelancers, and small businesses.
+                  Founded in 2025, we set out to change that. Our mission is to democratize access
+                  to high-quality web development, making it accessible to startups, freelancers,
+                  and small businesses.
                 </p>
                 <p>
-                  Today, we've helped over 150 clients across 12 countries transform
-                  their digital presence. From simple landing pages to complex web
-                  applications, we bring the same level of dedication and expertise
-                  to every project.
+                  Today, we've helped over 150 clients across 12 countries transform their digital
+                  presence. From simple landing pages to complex web applications, we bring the same
+                  level of dedication and expertise to every project.
                 </p>
               </div>
               <Button className="mt-8" asChild>
@@ -118,7 +112,7 @@ export default function About() {
                 </Link>
               </Button>
             </div>
-            
+
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-3xl" />
               <div className="relative glass rounded-2xl p-8">
@@ -146,7 +140,7 @@ export default function About() {
             title="What drives us"
             subtitle="These core values guide everything we do at Dubiqo."
           />
-          
+
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value) => (
               <Card
@@ -174,7 +168,7 @@ export default function About() {
             title="Meet the people behind Dubiqo"
             subtitle="A diverse team of experts passionate about creating exceptional digital experiences."
           />
-          
+
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {team.map((member) => (
               <Card
@@ -195,25 +189,6 @@ export default function About() {
               </Card>
             ))}
           </div>
-        </div>
-      </Section>
-
-      {/* CTA */}
-      <Section variant="muted">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Want to join our team?
-          </h2>
-          <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
-            We're always looking for talented individuals who share our passion
-            for creating exceptional digital experiences.
-          </p>
-          <Button size="lg" asChild>
-            <Link to="/careers">
-              View Open Positions
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Link>
-          </Button>
         </div>
       </Section>
     </Layout>

@@ -1,7 +1,6 @@
-import { ReactNode } from "react";
-import { Navbar } from "./Navbar";
-import { Footer } from "./Footer";
-import { ChatWidget } from "@/components/ChatWidget";
+import { ReactNode } from 'react';
+import { Navbar } from './Navbar';
+import { Footer } from './Footer';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,7 +12,6 @@ export function Layout({ children }: LayoutProps) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
-      <ChatWidget />
     </div>
   );
 }

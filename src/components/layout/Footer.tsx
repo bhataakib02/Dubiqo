@@ -1,35 +1,36 @@
-import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Github, Linkedin, Twitter } from "lucide-react";
+import { Link } from 'react-router-dom';
+import { Mail, Phone, MapPin, Github, Linkedin, Twitter } from 'lucide-react';
 
 const footerLinks = {
   services: [
-    { name: "Custom Websites", href: "/services/websites" },
-    { name: "Web Applications", href: "/services/web-apps" },
-    { name: "Dashboards", href: "/services/dashboards" },
-    { name: "E-Commerce", href: "/services/ecommerce" },
-    { name: "Site Repair", href: "/services/repair" },
-    { name: "Maintenance", href: "/services/maintenance" },
+    { name: 'Custom Websites', href: '/services/websites' },
+    { name: 'Web Applications', href: '/services/web-apps' },
+    { name: 'Dashboards', href: '/services/dashboards' },
+    { name: 'E-Commerce', href: '/services/ecommerce' },
+    { name: 'Portfolio Making', href: '/services/portfolios' },
+    { name: 'Site Repair', href: '/services/repair' },
+    { name: 'Maintenance', href: '/services/maintenance' },
   ],
   company: [
-    { name: "About Us", href: "/about" },
-    { name: "Portfolio", href: "/portfolio" },
-    { name: "Case Studies", href: "/case-studies" },
-    { name: "Blog", href: "/blog" },
-    { name: "Careers", href: "/careers" },
-    { name: "Contact", href: "/contact" },
+    { name: 'About Us', href: '/about' },
+    { name: 'Portfolio', href: '/portfolio' },
+    { name: 'Case Studies', href: '/case-studies' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'Careers', href: '/careers' },
+    { name: 'Contact', href: '/contact' },
   ],
   resources: [
-    { name: "Pricing", href: "/pricing" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Support", href: "/support" },
-    { name: "Downloads", href: "/downloads" },
-    { name: "Client Portal", href: "/client-portal" },
+    { name: 'Pricing', href: '/pricing' },
+    { name: 'FAQ', href: '/faq' },
+    { name: 'Support', href: '/support' },
+    { name: 'Downloads', href: '/downloads' },
+    { name: 'Client Portal', href: '/client-portal' },
   ],
   legal: [
-    { name: "Privacy Policy", href: "/legal/privacy" },
-    { name: "Terms of Service", href: "/legal/terms" },
-    { name: "Refund Policy", href: "/legal/refund" },
-    { name: "SLA", href: "/legal/sla" },
+    { name: 'Privacy Policy', href: '/legal/privacy' },
+    { name: 'Terms of Service', href: '/legal/terms' },
+    { name: 'Refund Policy', href: '/legal/refund' },
+    { name: 'SLA', href: '/legal/sla' },
   ],
 };
 
@@ -38,7 +39,7 @@ export function Footer() {
     <footer className="bg-card border-t border-border relative overflow-hidden">
       {/* Grid pattern background */}
       <div className="absolute inset-0 grid-pattern opacity-30" />
-      
+
       <div className="container mx-auto px-4 py-16 relative">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
           {/* Brand column */}
@@ -52,7 +53,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
-              We build websites that build your business. Modern digital solutions for the modern world.
+              We build websites that build your business. Modern digital solutions for the modern
+              world.
             </p>
             <div className="space-y-3">
               <a

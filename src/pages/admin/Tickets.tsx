@@ -77,10 +77,45 @@ export default function AdminTickets() {
   const [replyMessage, setReplyMessage] = useState('');
   const [isInternal, setIsInternal] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [assigningTicket, setAssigningTicket] = useState<TicketWithClient | null>(null);
+  const [staffMembers, setStaffMembers] = useState<
+    Array<{ id: string; full_name: string | null; email: string }>
+  >([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('unassign');
 
   useEffect(() => {
     loadTickets();
+    loadStaffMembers();
   }, []);
+
+  const loadStaffMembers = async () => {
+    if (!supabase) return;
+    try {
+      // Load all admin and staff users
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['admin', 'staff']);
+
+      if (!roles || roles.length === 0) {
+        setStaffMembers([]);
+        return;
+      }
+
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      setStaffMembers(profiles || []);
+    } catch (error) {
+      console.error('Error loading staff members:', error);
+      setStaffMembers([]);
+    }
+  };
 
   const loadTickets = async () => {
     if (!supabase) return;
@@ -126,6 +161,7 @@ export default function AdminTickets() {
   };
 
   const handleViewTicket = async (ticket: TicketWithClient) => {
+    setOpenDropdownId(null); // Close dropdown
     // Load ticket with messages
     try {
       const { data: messages } = await supabase
@@ -141,12 +177,17 @@ export default function AdminTickets() {
       setIsDetailOpen(true);
     } catch (error) {
       console.error('Error loading ticket messages:', error);
-      setSelectedTicket(ticket);
+      toast.error('Failed to load ticket messages');
+      setSelectedTicket({
+        ...ticket,
+        messages: [],
+      });
       setIsDetailOpen(true);
     }
   };
 
   const handleReplyTicket = (ticket: TicketWithClient) => {
+    setOpenDropdownId(null); // Close dropdown
     setSelectedTicket(ticket);
     setReplyMessage('');
     setIsInternal(false);
@@ -257,31 +298,51 @@ export default function AdminTickets() {
     }
   };
 
-  const handleAssignTicket = async (ticket: TicketWithClient) => {
-    // Get current user for assignment
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('You must be logged in to assign tickets');
+  const handleAssignTicket = (ticket: TicketWithClient) => {
+    setOpenDropdownId(null); // Close dropdown
+    setAssigningTicket(ticket);
+    setSelectedStaffId(ticket.assigned_to || 'unassign');
+    setIsAssignDialogOpen(true);
+  };
+
+  const submitAssignTicket = async () => {
+    if (!assigningTicket) {
+      toast.error('No ticket selected');
       return;
     }
 
     try {
-      // The assigned_to field references profiles(id), which is the same as auth.users(id)
-      // So we can use user.id directly
+      const isUnassigning = selectedStaffId === 'unassign';
+      const updateData: { assigned_to: string | null; updated_at: string; status?: string } = {
+        assigned_to: isUnassigning ? null : selectedStaffId,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only auto-update status if assigning (not unassigning)
+      if (!isUnassigning && assigningTicket.status === 'open') {
+        updateData.status = 'in_progress';
+      }
+
       const { error } = await supabase
         .from('tickets')
-        .update({
-          assigned_to: user.id,
-          updated_at: new Date().toISOString(),
-          status: ticket.status === 'open' ? 'in_progress' : ticket.status, // Auto-update status if open
-        })
-        .eq('id', ticket.id);
+        .update(updateData)
+        .eq('id', assigningTicket.id);
 
       if (error) throw error;
-      toast.success('Ticket assigned to you');
-      loadTickets();
+
+      if (isUnassigning) {
+        toast.success('Ticket unassigned');
+      } else {
+        const assignedStaff = staffMembers.find((s) => s.id === selectedStaffId);
+        toast.success(
+          `Ticket assigned to ${assignedStaff?.full_name || assignedStaff?.email || 'staff member'}`
+        );
+      }
+
+      setIsAssignDialogOpen(false);
+      setAssigningTicket(null);
+      setSelectedStaffId('unassign');
+      await loadTickets();
     } catch (error) {
       console.error('Error assigning ticket:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -295,7 +356,8 @@ export default function AdminTickets() {
       return;
     }
     // Open email client or copy email
-    window.location.href = `mailto:${ticket.client.email}?subject=Re: ${ticket.title}`;
+    const subject = encodeURIComponent(`Re: ${ticket.title}`);
+    window.location.href = `mailto:${ticket.client.email}?subject=${subject}`;
     toast.success('Opening email client...');
   };
 
@@ -309,7 +371,7 @@ export default function AdminTickets() {
 
       if (error) throw error;
       toast.success('Ticket deleted successfully');
-      loadTickets();
+      await loadTickets();
     } catch (error) {
       console.error('Error deleting ticket:', error);
       toast.error('Failed to delete ticket');
@@ -491,7 +553,10 @@ export default function AdminTickets() {
                           })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
+                          <DropdownMenu
+                            open={openDropdownId === ticket.id}
+                            onOpenChange={(open) => setOpenDropdownId(open ? ticket.id : null)}
+                          >
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
                                 <MoreVertical className="w-4 h-4" />
@@ -512,13 +577,21 @@ export default function AdminTickets() {
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Assign
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEmailClient(ticket)}>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  handleEmailClient(ticket);
+                                }}
+                              >
                                 <Mail className="w-4 h-4 mr-2" />
                                 Email Client
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleDeleteTicket(ticket)}
+                                onClick={() => {
+                                  setOpenDropdownId(null);
+                                  handleDeleteTicket(ticket);
+                                }}
                                 className="text-destructive"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -690,6 +763,49 @@ export default function AdminTickets() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Ticket Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Ticket</DialogTitle>
+            <DialogDescription>{assigningTicket?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="assign-staff">Assign to</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger id="assign-staff">
+                  <SelectValue placeholder="Select a staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassign">Unassign</SelectItem>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id}>
+                      {staff.full_name || staff.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAssignDialogOpen(false);
+                  setAssigningTicket(null);
+                  setSelectedStaffId('unassign');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={submitAssignTicket}>
+                {selectedStaffId === 'unassign' ? 'Unassign' : 'Assign'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

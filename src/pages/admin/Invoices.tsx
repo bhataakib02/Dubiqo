@@ -1,17 +1,46 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Search, IndianRupee, RefreshCw, Eye, Plus, Edit, Trash2, Download } from "lucide-react";
-import { toast } from "sonner";
-import type { Tables } from "@/integrations/supabase/types";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  ArrowLeft,
+  Search,
+  IndianRupee,
+  RefreshCw,
+  Eye,
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import type { Tables } from '@/integrations/supabase/types';
 
 const formatINR = (paise: number) => {
   const rupees = paise / 100;
@@ -23,7 +52,7 @@ const formatINR = (paise: number) => {
   }).format(rupees);
 };
 
-type InvoiceWithClient = Tables<"invoices"> & {
+type InvoiceWithClient = Tables<'invoices'> & {
   client?: { email: string; full_name: string | null; client_code: string | null } | null;
 };
 
@@ -33,18 +62,18 @@ export default function AdminInvoices() {
   const [invoices, setInvoices] = useState<InvoiceWithClient[]>([]);
   const [clients, setClients] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<InvoiceWithClient | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<InvoiceWithClient | null>(null);
 
   const [formData, setFormData] = useState({
-    client_id: "",
-    amount: "",
-    tax_amount: "0",
-    due_date: "",
-    status: "draft"
+    client_id: '',
+    amount: '',
+    tax_amount: '0',
+    due_date: '',
+    status: 'draft',
   });
 
   useEffect(() => {
@@ -54,14 +83,41 @@ export default function AdminInvoices() {
 
   const loadClients = async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('id, email, full_name, client_code').order('email');
-    setClients(data || []);
+    try {
+      // Load all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, client_code')
+        .order('email');
+
+      if (profilesError) throw profilesError;
+
+      // Get admin and staff user IDs to exclude them from the client list
+      const { data: adminStaffRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'staff']);
+
+      if (adminStaffRoles && adminStaffRoles.length > 0) {
+        const adminStaffIds = new Set(adminStaffRoles.map((r) => r.user_id));
+        // Filter out admin and staff, show everyone else (clients and users without roles)
+        const clientProfiles = (profiles || []).filter((p) => !adminStaffIds.has(p.id));
+        setClients(clientProfiles);
+      } else {
+        // If no admin/staff roles found, show all profiles
+        setClients(profiles || []);
+      }
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      toast.error('Failed to load clients');
+      setClients([]);
+    }
   };
 
   const loadInvoices = async () => {
     if (!supabase) return;
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('invoices')
@@ -82,7 +138,9 @@ export default function AdminInvoices() {
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, '0');
     return `INV-${year}${month}-${random}`;
   };
 
@@ -95,7 +153,7 @@ export default function AdminInvoices() {
 
     try {
       const amount = Math.round(parseFloat(formData.amount) * 100);
-      const taxAmount = Math.round(parseFloat(formData.tax_amount || "0") * 100);
+      const taxAmount = Math.round(parseFloat(formData.tax_amount || '0') * 100);
       const totalAmount = amount + taxAmount;
 
       const { error } = await supabase.from('invoices').insert({
@@ -105,7 +163,7 @@ export default function AdminInvoices() {
         tax_amount: taxAmount,
         total_amount: totalAmount,
         due_date: formData.due_date,
-        status: formData.status
+        status: formData.status,
       });
 
       if (error) throw error;
@@ -123,7 +181,7 @@ export default function AdminInvoices() {
 
     try {
       const amount = Math.round(parseFloat(formData.amount) * 100);
-      const taxAmount = Math.round(parseFloat(formData.tax_amount || "0") * 100);
+      const taxAmount = Math.round(parseFloat(formData.tax_amount || '0') * 100);
       const totalAmount = amount + taxAmount;
 
       const updateData: Record<string, any> = {
@@ -133,7 +191,7 @@ export default function AdminInvoices() {
         total_amount: totalAmount,
         due_date: formData.due_date,
         status: formData.status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (formData.status === 'paid' && editingInvoice.status !== 'paid') {
@@ -177,23 +235,23 @@ export default function AdminInvoices() {
       amount: (Number(invoice.amount) / 100).toString(),
       tax_amount: (Number(invoice.tax_amount || 0) / 100).toString(),
       due_date: invoice.due_date,
-      status: invoice.status
+      status: invoice.status,
     });
   };
 
   const resetForm = () => {
-    setFormData({ client_id: "", amount: "", tax_amount: "0", due_date: "", status: "draft" });
+    setFormData({ client_id: '', amount: '', tax_amount: '0', due_date: '', status: 'draft' });
     setIsCreateOpen(false);
     setEditingInvoice(null);
   };
 
   const updateInvoiceStatus = async (invoiceId: string, newStatus: string) => {
     if (!supabase) return;
-    
+
     try {
       const updateData: Record<string, any> = { status: newStatus };
       if (newStatus === 'paid') updateData.paid_at = new Date().toISOString();
-      
+
       const { error } = await supabase.from('invoices').update(updateData).eq('id', invoiceId);
       if (error) throw error;
       toast.success('Invoice status updated');
@@ -235,32 +293,38 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
     toast.success('Invoice downloaded');
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
+  const filteredInvoices = invoices.filter((invoice) => {
+    const matchesSearch =
       invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.client?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.client?.client_code?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'draft': return 'bg-muted text-muted-foreground';
-      case 'sent': return 'bg-primary/10 text-primary border-primary/20';
-      case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      case 'paid': return 'bg-success/10 text-success border-success/20';
-      case 'overdue': return 'bg-destructive/10 text-destructive border-destructive/20';
-      default: return 'bg-muted text-muted-foreground';
+      case 'draft':
+        return 'bg-muted text-muted-foreground';
+      case 'sent':
+        return 'bg-primary/10 text-primary border-primary/20';
+      case 'pending':
+        return 'bg-warning/10 text-warning border-warning/20';
+      case 'paid':
+        return 'bg-success/10 text-success border-success/20';
+      case 'overdue':
+        return 'bg-destructive/10 text-destructive border-destructive/20';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   const totalPending = filteredInvoices
-    .filter(i => ['pending', 'sent', 'overdue'].includes(i.status))
+    .filter((i) => ['pending', 'sent', 'overdue'].includes(i.status))
     .reduce((sum, i) => sum + Number(i.total_amount), 0);
 
   const totalPaid = filteredInvoices
-    .filter(i => i.status === 'paid')
+    .filter((i) => i.status === 'paid')
     .reduce((sum, i) => sum + Number(i.total_amount), 0);
 
   return (
@@ -280,7 +344,12 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                 <p className="text-muted-foreground">Manage billing and invoices</p>
               </div>
             </div>
-            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Button
+              onClick={() => {
+                resetForm();
+                setIsCreateOpen(true);
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create Invoice
             </Button>
@@ -324,10 +393,17 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 w-48" />
+                  <Input
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-48"
+                  />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
@@ -369,19 +445,28 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                   <TableBody>
                     {filteredInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
-                        <TableCell className="font-mono font-semibold">{invoice.invoice_number}</TableCell>
+                        <TableCell className="font-mono font-semibold">
+                          {invoice.invoice_number}
+                        </TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{invoice.client?.full_name || 'N/A'}</p>
                             <p className="text-xs text-muted-foreground">{invoice.client?.email}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="font-semibold">{formatINR(Number(invoice.total_amount))}</TableCell>
+                        <TableCell className="font-semibold">
+                          {formatINR(Number(invoice.total_amount))}
+                        </TableCell>
                         <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Select value={invoice.status} onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}>
+                          <Select
+                            value={invoice.status}
+                            onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}
+                          >
                             <SelectTrigger className="w-28 h-8">
-                              <Badge variant="outline" className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+                              <Badge variant="outline" className={getStatusColor(invoice.status)}>
+                                {invoice.status}
+                              </Badge>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="draft">Draft</SelectItem>
@@ -394,16 +479,29 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => setViewingInvoice(invoice)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setViewingInvoice(invoice)}
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => downloadInvoice(invoice)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadInvoice(invoice)}
+                            >
                               <Download className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(invoice)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(invoice)} className="text-destructive hover:text-destructive">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(invoice)}
+                              className="text-destructive hover:text-destructive"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -427,36 +525,72 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Client *</Label>
-              <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+              <Select
+                value={formData.client_id}
+                onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select client" />
+                </SelectTrigger>
                 <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.full_name || client.email} {client.client_code && `(${client.client_code})`}
+                  {clients.length === 0 ? (
+                    <SelectItem value="no-clients" disabled>
+                      No clients available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.full_name || client.email}{' '}
+                        {client.client_code && `(${client.client_code})`}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              {clients.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  No clients found. Make sure users have the 'client' role assigned.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Amount (₹) *</Label>
-                <Input type="number" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="0.00" />
+                <Input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0.00"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Tax Amount (₹)</Label>
-                <Input type="number" value={formData.tax_amount} onChange={(e) => setFormData({ ...formData, tax_amount: e.target.value })} placeholder="0.00" />
+                <Input
+                  type="number"
+                  value={formData.tax_amount}
+                  onChange={(e) => setFormData({ ...formData, tax_amount: e.target.value })}
+                  placeholder="0.00"
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Due Date *</Label>
-                <Input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })} />
+                <Input
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="sent">Sent</SelectItem>
@@ -468,7 +602,9 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            <Button variant="outline" onClick={resetForm}>
+              Cancel
+            </Button>
             <Button onClick={editingInvoice ? handleUpdate : handleCreate}>
               {editingInvoice ? 'Update' : 'Create'}
             </Button>
@@ -491,12 +627,16 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge variant="outline" className={getStatusColor(viewingInvoice.status)}>{viewingInvoice.status}</Badge>
+                  <Badge variant="outline" className={getStatusColor(viewingInvoice.status)}>
+                    {viewingInvoice.status}
+                  </Badge>
                 </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Client</p>
-                <p className="font-medium">{viewingInvoice.client?.full_name || viewingInvoice.client?.email}</p>
+                <p className="font-medium">
+                  {viewingInvoice.client?.full_name || viewingInvoice.client?.email}
+                </p>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -505,11 +645,15 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tax</p>
-                  <p className="font-semibold">{formatINR(Number(viewingInvoice.tax_amount || 0))}</p>
+                  <p className="font-semibold">
+                    {formatINR(Number(viewingInvoice.tax_amount || 0))}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="font-bold text-lg">{formatINR(Number(viewingInvoice.total_amount))}</p>
+                  <p className="font-bold text-lg">
+                    {formatINR(Number(viewingInvoice.total_amount))}
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -525,15 +669,23 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
               {viewingInvoice.paid_at && (
                 <div>
                   <p className="text-sm text-muted-foreground">Paid On</p>
-                  <p className="text-success">{new Date(viewingInvoice.paid_at).toLocaleDateString()}</p>
+                  <p className="text-success">
+                    {new Date(viewingInvoice.paid_at).toLocaleDateString()}
+                  </p>
                 </div>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingInvoice(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewingInvoice(null)}>
+              Close
+            </Button>
             {viewingInvoice && (
-              <Button onClick={() => { downloadInvoice(viewingInvoice); }}>
+              <Button
+                onClick={() => {
+                  downloadInvoice(viewingInvoice);
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
