@@ -32,33 +32,39 @@ export default function AdminDashboard() {
     if (!supabase) return;
 
     try {
-      const [
-        { count: usersCount },
-        { count: projectsCount },
-        { count: quotesCount },
-        { count: bookingsCount },
-        { count: invoicesCount },
-        { count: ticketsCount },
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('projects').select('*', { count: 'exact', head: true }),
-        supabase.from('quotes').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('invoices').select('*', { count: 'exact', head: true }),
-        supabase.from('tickets').select('*', { count: 'exact', head: true }),
-      ]);
+      // Use a SECURITY DEFINER RPC to get aggregated counts even when RLS is enforced
+      const { data, error } = await supabase.rpc('get_dashboard_counts');
+      if (error) {
+        console.error('RPC get_dashboard_counts error:', error);
+        return;
+      }
 
+      const counts = (data as any) ?? {};
       setStats({
-        users: usersCount || 0,
-        projects: projectsCount || 0,
-        quotes: quotesCount || 0,
-        bookings: bookingsCount || 0,
-        invoices: invoicesCount || 0,
-        tickets: ticketsCount || 0,
+        users: counts.total_profiles ?? 0,
+        projects: counts.total_projects ?? 0,
+        quotes: counts.total_quotes ?? 0,
+        bookings: counts.total_bookings ?? 0,
+        invoices: counts.total_invoices ?? 0,
+        tickets: counts.total_tickets ?? 0,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error loading dashboard counts:', error);
     }
+  };
+
+  const handleLogout = async () => {
+    if (!supabase) return;
+    try {
+      // Sign out via Supabase
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error', err);
+    }
+    // Redirect to auth page
+    window.location.href = '/auth';
   };
 
   const statCards = [
@@ -116,9 +122,14 @@ export default function AdminDashboard() {
               <h1 className="text-2xl font-bold">Admin Dashboard</h1>
               <p className="text-muted-foreground">Dubiqo Digital Solutions</p>
             </div>
-            <Link to="/">
-              <Button variant="outline">Back to Site</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/">
+                <Button variant="outline">Back to Site</Button>
+              </Link>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -144,7 +155,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions (nav-style) + System Overview + Recent Activity */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
@@ -153,41 +164,61 @@ export default function AdminDashboard() {
                 Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Link to="/admin/users">
-                <Button variant="outline" className="w-full justify-start">
+            <CardContent>
+              <nav className="space-y-2" aria-label="Quick actions">
+                <Link
+                  to="/admin/users"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   Manage Users
-                </Button>
-              </Link>
-              <Link to="/admin/projects">
-                <Button variant="outline" className="w-full justify-start">
+                </Link>
+                <Link
+                  to="/admin/projects"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   View Projects
-                </Button>
-              </Link>
-              <Link to="/admin/invoices">
-                <Button variant="outline" className="w-full justify-start">
+                </Link>
+                <Link
+                  to="/admin/invoices"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   Create Invoice
-                </Button>
-              </Link>
-              <Link to="/admin/downloads">
-                <Button variant="outline" className="w-full justify-start">
+                </Link>
+                <Link
+                  to="/admin/downloads"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   Manage Downloads
-                </Button>
-              </Link>
-              <Link to="/admin/portfolio">
-                <Button variant="outline" className="w-full justify-start">
+                </Link>
+                <Link
+                  to="/admin/portfolio"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   Manage Portfolio
-                </Button>
-              </Link>
-              <Link to="/admin/case-studies">
-                <Button variant="outline" className="w-full justify-start">
+                </Link>
+                <Link
+                  to="/admin/case-studies"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
                   Manage Case Studies
-                </Button>
-              </Link>
+                </Link>
+                <Link
+                  to="/admin/blogs"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
+                  Manage Blog Posts
+                </Link>
+                <Link
+                  to="/admin/pricing"
+                  className="block w-full rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground transition"
+                >
+                  Manage Pricing
+                </Link>
+              </nav>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-h-[220px]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart className="h-5 w-5" />
@@ -212,12 +243,14 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-h-[220px]">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Activity monitoring coming soon...</p>
+              <div className="h-40 overflow-auto">
+                <p className="text-sm text-muted-foreground">Activity monitoring coming soon...</p>
+              </div>
             </CardContent>
           </Card>
         </div>

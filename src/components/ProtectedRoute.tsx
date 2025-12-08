@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-type UserRole = Database["public"]["Enums"]["app_role"];
+type UserRole = Database['public']['Enums']['app_role'];
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -26,8 +26,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         setIsAuthorized(false);
         setIsLoading(false);
@@ -42,13 +44,23 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       }
 
       // Check user role
-      const { data: roleData } = await supabase
+      const { data: roleData, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', session.user.id)
-        .single();
+        .eq('user_id', session.user.id);
 
-      if (roleData && requiredRole.includes(roleData.role)) {
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        setIsAuthorized(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if user has any of the required roles
+      const hasRequiredRole =
+        roleData && roleData.length > 0 && roleData.some((r) => requiredRole.includes(r.role));
+
+      if (hasRequiredRole) {
         setIsAuthorized(true);
       } else {
         setIsAuthorized(false);

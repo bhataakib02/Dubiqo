@@ -1,25 +1,45 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Search, Calendar, RefreshCw, Eye, Clock } from "lucide-react";
-import { toast } from "sonner";
-import type { Tables } from "@/integrations/supabase/types";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { ArrowLeft, Search, Calendar, RefreshCw, Eye, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import type { Tables } from '@/integrations/supabase/types';
 
-type BookingWithClient = Tables<"bookings"> & {
-  client?: { email: string; full_name: string | null; client_code: string | null } | null;
-};
+type BookingWithClient = Tables<'bookings'>;
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<BookingWithClient[]>([]);
+  const [viewingBooking, setViewingBooking] = useState<BookingWithClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     loadBookings();
@@ -28,15 +48,13 @@ export default function AdminBookings() {
   const loadBookings = async () => {
     if (!supabase) return;
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          client:profiles!bookings_client_id_fkey(email, full_name, client_code)
-        `)
-        .order('scheduled_at', { ascending: true });
+        .select('*')
+        .order('date', { ascending: true })
+        .order('time_slot', { ascending: true });
 
       if (error) throw error;
       setBookings(data || []);
@@ -50,7 +68,7 @@ export default function AdminBookings() {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     if (!supabase) return;
-    
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -66,29 +84,132 @@ export default function AdminBookings() {
     }
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = 
-      booking.booking_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.client?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.client?.client_code?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
+  const handleView = async (booking: BookingWithClient) => {
+    setViewingBooking(booking);
+  };
+
+  const handleReschedule = async (bookingId: string) => {
+    if (!supabase) return;
+    const newDate = window.prompt('Enter new date (YYYY-MM-DD):');
+    if (!newDate) return;
+    const newTime = window.prompt('Enter new time (HH:MM, 24h):');
+    if (!newTime) return;
+
+    // Basic validation
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRe = /^\d{2}:\d{2}$/;
+    if (!dateRe.test(newDate)) {
+      toast.error('Invalid date format. Use YYYY-MM-DD');
+      return;
+    }
+    if (!timeRe.test(newTime)) {
+      toast.error('Invalid time format. Use HH:MM (24h)');
+      return;
+    }
+    const parsed = new Date(`${newDate}T${newTime}`);
+    if (isNaN(parsed.getTime())) {
+      toast.error('Invalid date/time');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ date: newDate, time_slot: newTime })
+        .eq('id', bookingId);
+
+      if (error) {
+        console.error('Supabase reschedule error', error);
+        toast.error(error.message || 'Failed to reschedule booking');
+        return;
+      }
+
+      toast.success('Booking rescheduled');
+      setViewingBooking(null);
+      loadBookings();
+    } catch (err: any) {
+      console.error('Error rescheduling booking', err);
+      const msg = err?.message || String(err);
+      toast.error(msg || 'Failed to reschedule booking');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!supabase) return;
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingId);
+
+      if (error) {
+        console.error('Supabase cancel error', error);
+        // Show specific message when available
+        const msg = error.message || 'Failed to cancel booking';
+        // Common cause: RLS / permission error — hint to check admin role
+        if (
+          (error as any)?.status === 401 ||
+          (error as any)?.status === 403 ||
+          /permission|row level security|RLS/i.test(msg)
+        ) {
+          toast.error(`${msg}. Permission denied — ensure you are signed in as an admin.`);
+        } else {
+          toast.error(msg);
+        }
+        return;
+      }
+
+      toast.success('Booking cancelled');
+      setViewingBooking(null);
+      loadBookings();
+    } catch (err: any) {
+      console.error('Error cancelling booking', err);
+      const msg = err?.message || String(err);
+      toast.error(msg || 'Failed to cancel booking');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const filteredBookings = bookings.filter((booking) => {
+    const matchesSearch =
+      (booking.service_type || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (booking.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (booking.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      case 'confirmed': return 'bg-success/10 text-success border-success/20';
-      case 'cancelled': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'completed': return 'bg-primary/10 text-primary border-primary/20';
-      case 'no_show': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'pending':
+        return 'bg-warning/10 text-warning border-warning/20';
+      case 'confirmed':
+        return 'bg-success/10 text-success border-success/20';
+      case 'cancelled':
+        return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'completed':
+        return 'bg-primary/10 text-primary border-primary/20';
+      case 'no_show':
+        return 'bg-muted text-muted-foreground';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
-  const upcomingBookings = filteredBookings.filter(b => 
-    new Date(b.scheduled_at) > new Date() && b.status !== 'cancelled'
-  );
+  const upcomingBookings = filteredBookings.filter((b) => {
+    try {
+      const dt = new Date(`${b.date}T${b.time_slot || '00:00'}`);
+      return dt > new Date() && b.status !== 'cancelled';
+    } catch (e) {
+      return false;
+    }
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -199,30 +320,39 @@ export default function AdminBookings() {
                   </TableHeader>
                   <TableBody>
                     {filteredBookings.map((booking) => {
-                      const scheduledDate = new Date(booking.scheduled_at);
+                      const scheduledDate = new Date(
+                        `${booking.date}T${booking.time_slot || '00:00'}`
+                      );
                       const isPast = scheduledDate < new Date();
-                      
+
                       return (
                         <TableRow key={booking.id} className={isPast ? 'opacity-60' : ''}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{booking.client?.full_name || 'N/A'}</p>
-                              <p className="text-xs text-muted-foreground">{booking.client?.email}</p>
-                              {booking.client?.client_code && (
-                                <p className="text-xs font-mono text-primary">{booking.client.client_code}</p>
+                              <p className="font-medium">{booking.name || 'N/A'}</p>
+                              <p className="text-xs text-muted-foreground">{booking.email}</p>
+                              {booking.phone && (
+                                <p className="text-xs font-mono text-primary">{booking.phone}</p>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{booking.booking_type}</TableCell>
+                          <TableCell>{booking.service_type}</TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium">{scheduledDate.toLocaleDateString()}</p>
                               <p className="text-xs text-muted-foreground">
-                                {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {scheduledDate.toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell>{booking.duration_minutes} min</TableCell>
+                          <TableCell>
+                            {booking.duration_minutes
+                              ? `${booking.duration_minutes} min`
+                              : booking.time_slot || '-'}
+                          </TableCell>
                           <TableCell>
                             <Select
                               value={booking.status}
@@ -242,9 +372,11 @@ export default function AdminBookings() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="max-w-xs truncate">{booking.notes || '-'}</TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {booking.notes || '-'}
+                          </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleView(booking)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                           </TableCell>
@@ -258,6 +390,65 @@ export default function AdminBookings() {
           </CardContent>
         </Card>
       </main>
+      {/* View Booking Dialog */}
+      <Dialog open={!!viewingBooking} onOpenChange={() => setViewingBooking(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          {viewingBooking && (
+            <div className="space-y-4 py-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Client</p>
+                <p className="font-medium">{viewingBooking.name}</p>
+                <p className="text-xs text-muted-foreground">{viewingBooking.email}</p>
+                {viewingBooking.phone && (
+                  <p className="text-xs text-primary">{viewingBooking.phone}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Type</p>
+                <p className="font-medium">{viewingBooking.service_type || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Date & Time</p>
+                <p className="font-medium">
+                  {new Date(
+                    `${viewingBooking.date}T${viewingBooking.time_slot || '00:00'}`
+                  ).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Notes</p>
+                <p className="font-medium">{viewingBooking.notes || '-'}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            {viewingBooking && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleReschedule(viewingBooking.id)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Rescheduling...' : 'Reschedule'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleCancelBooking(viewingBooking.id)}
+                  disabled={actionLoading}
+                >
+                  Cancel Booking
+                </Button>
+              </>
+            )}
+            <Button variant="outline" onClick={() => setViewingBooking(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,16 +1,46 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Search, Users, RefreshCw, Edit, Trash2, Eye, FileText, FolderKanban, Ticket } from "lucide-react";
-import { toast } from "sonner";
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  ArrowLeft,
+  Search,
+  Users,
+  RefreshCw,
+  Edit,
+  Trash2,
+  Eye,
+  FileText,
+  FolderKanban,
+  Ticket,
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 interface UserWithRole {
   id: string;
@@ -27,10 +57,15 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [viewingUser, setViewingUser] = useState<UserWithRole | null>(null);
-  const [editForm, setEditForm] = useState({ full_name: "", company_name: "", phone: "", role: "client" });
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    company_name: '',
+    phone: '',
+    role: 'client',
+  });
   const [userStats, setUserStats] = useState<{
     invoices: number;
     projects: number;
@@ -43,11 +78,12 @@ export default function AdminUsers() {
 
   useEffect(() => {
     if (searchTerm) {
-      const filtered = users.filter(user => 
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.client_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = users.filter(
+        (user) =>
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.client_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.role.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     } else {
@@ -58,7 +94,7 @@ export default function AdminUsers() {
   const loadUsers = async () => {
     if (!supabase) return;
     setIsLoading(true);
-    
+
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -71,22 +107,30 @@ export default function AdminUsers() {
         .from('user_roles')
         .select('user_id, role');
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.warn('Warning: failed to load user_roles (RLS or permission issue)', rolesError);
+      }
 
       const roleMap = new Map<string, string>();
-      roles?.forEach(r => {
-        roleMap.set(r.user_id, r.role);
+      (roles || []).forEach((r: any) => {
+        try {
+          roleMap.set(r.user_id, r.role);
+        } catch (e) {
+          console.warn('Malformed role row', r, e);
+        }
       });
 
-      const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => ({
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => ({
         ...profile,
-        role: roleMap.get(profile.id) || 'client'
+        role: roleMap.get(profile.id) || 'client',
       }));
 
       setUsers(usersWithRoles);
       setFilteredUsers(usersWithRoles);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading users:', error);
+      if (error?.status)
+        console.error('Status:', error.status, 'Details:', error?.details || error?.message);
       toast.error('Failed to load users');
     } finally {
       setIsLoading(false);
@@ -95,18 +139,27 @@ export default function AdminUsers() {
 
   const loadUserStats = async (userId: string) => {
     if (!supabase) return;
-    
+
     try {
       const [invoicesRes, projectsRes, ticketsRes] = await Promise.all([
-        supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('client_id', userId),
-        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('client_id', userId),
-        supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('client_id', userId)
+        supabase
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', userId),
+        supabase
+          .from('projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', userId),
+        supabase
+          .from('tickets')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', userId),
       ]);
 
       setUserStats({
         invoices: invoicesRes.count || 0,
         projects: projectsRes.count || 0,
-        tickets: ticketsRes.count || 0
+        tickets: ticketsRes.count || 0,
       });
     } catch (error) {
       console.error('Error loading user stats:', error);
@@ -121,10 +174,10 @@ export default function AdminUsers() {
   const handleEdit = (user: UserWithRole) => {
     setEditingUser(user);
     setEditForm({
-      full_name: user.full_name || "",
-      company_name: user.company_name || "",
-      phone: user.phone || "",
-      role: user.role
+      full_name: user.full_name || '',
+      company_name: user.company_name || '',
+      phone: user.phone || '',
+      role: user.role,
     });
   };
 
@@ -139,7 +192,7 @@ export default function AdminUsers() {
           full_name: editForm.full_name,
           company_name: editForm.company_name,
           phone: editForm.phone,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', editingUser.id);
 
@@ -172,17 +225,17 @@ export default function AdminUsers() {
 
   const handleDelete = async (user: UserWithRole) => {
     if (!supabase) return;
-    if (!confirm(`Are you sure you want to delete user ${user.email}? This action cannot be undone.`)) return;
+    if (
+      !confirm(`Are you sure you want to delete user ${user.email}? This action cannot be undone.`)
+    )
+      return;
 
     try {
       // Delete user role first
       await supabase.from('user_roles').delete().eq('user_id', user.id);
-      
+
       // Delete profile (this won't delete from auth.users, but removes from app)
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
+      const { error } = await supabase.from('profiles').delete().eq('id', user.id);
 
       if (error) throw error;
       toast.success('User deleted successfully');
@@ -195,9 +248,12 @@ export default function AdminUsers() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'staff': return 'bg-primary/10 text-primary border-primary/20';
-      default: return 'bg-muted text-muted-foreground';
+      case 'admin':
+        return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'staff':
+        return 'bg-primary/10 text-primary border-primary/20';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -294,7 +350,12 @@ export default function AdminUsers() {
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(user)} className="text-destructive hover:text-destructive">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(user)}
+                              className="text-destructive hover:text-destructive"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -324,7 +385,9 @@ export default function AdminUsers() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Role</p>
-                  <Badge variant="outline" className={getRoleColor(viewingUser.role)}>{viewingUser.role}</Badge>
+                  <Badge variant="outline" className={getRoleColor(viewingUser.role)}>
+                    {viewingUser.role}
+                  </Badge>
                 </div>
               </div>
               <div>
@@ -366,7 +429,9 @@ export default function AdminUsers() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingUser(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewingUser(null)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -401,7 +466,10 @@ export default function AdminUsers() {
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value })}>
+              <Select
+                value={editForm.role}
+                onValueChange={(value) => setEditForm({ ...editForm, role: value })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -414,7 +482,9 @@ export default function AdminUsers() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancel
+            </Button>
             <Button onClick={handleSaveEdit}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>

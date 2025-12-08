@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { ensureUserRole, getRedirectPath } from '@/lib/roleUtils';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -21,33 +22,14 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
 
-  const checkRoleAndRedirect = async (userId: string) => {
-    if (!supabase) return;
+  const checkRoleAndRedirect = async (userId: string, userEmail: string) => {
+    console.log('checkRoleAndRedirect called with:', { userId, userEmail });
 
-    try {
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+    const role = await ensureUserRole(userId, userEmail);
+    const redirectPath = getRedirectPath(role);
 
-      if (roleError) {
-        console.error('Error checking role:', roleError);
-      }
-
-      console.log('Auth role check:', { userId, roleData, roleError });
-
-      if (roleData && (roleData.role === 'admin' || roleData.role === 'staff')) {
-        console.log('Redirecting to admin dashboard');
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        console.log('Redirecting to client portal');
-        navigate('/client-portal', { replace: true });
-      }
-    } catch (error) {
-      console.error('Error checking role:', error);
-      navigate('/client-portal', { replace: true });
-    }
+    console.log('Redirecting to:', { role, redirectPath });
+    navigate(redirectPath, { replace: true });
   };
 
   useEffect(() => {
@@ -57,7 +39,7 @@ export default function Auth() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session?.user) {
-        await checkRoleAndRedirect(session.user.id);
+        await checkRoleAndRedirect(session.user.id, session.user.email || '');
       }
     };
     checkUser();
@@ -67,7 +49,7 @@ export default function Auth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        await checkRoleAndRedirect(session.user.id);
+        await checkRoleAndRedirect(session.user.id, session.user.email || '');
       }
     });
 
@@ -98,7 +80,7 @@ export default function Auth() {
         );
       } else if (data.user) {
         toast.success('Welcome back!');
-        await checkRoleAndRedirect(data.user.id);
+        await checkRoleAndRedirect(data.user.id, data.user.email || '');
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
@@ -135,7 +117,7 @@ export default function Auth() {
         );
       } else if (data.user) {
         toast.success('Account created successfully!');
-        await checkRoleAndRedirect(data.user.id);
+        await checkRoleAndRedirect(data.user.id, data.user.email || '');
       }
     } catch (error) {
       toast.error('An unexpected error occurred');

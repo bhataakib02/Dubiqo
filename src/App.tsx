@@ -51,6 +51,8 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminDownloads from './pages/admin/Downloads';
 import AdminPortfolio from './pages/admin/PortfolioAdmin';
 import AdminCaseStudies from './pages/admin/CaseStudiesAdmin';
+import AdminBlogs from './pages/admin/BlogsAdmin';
+import AdminPricing from './pages/admin/PricingAdmin';
 
 const queryClient = new QueryClient();
 
@@ -152,6 +154,22 @@ const App = () => (
             element={
               <ProtectedRoute requiredRole={['admin', 'staff']}>
                 <AdminPortfolio />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/blogs"
+            element={
+              <ProtectedRoute requiredRole={['admin', 'staff']}>
+                <AdminBlogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pricing"
+            element={
+              <ProtectedRoute requiredRole={['admin', 'staff']}>
+                <AdminPricing />
               </ProtectedRoute>
             }
           />
