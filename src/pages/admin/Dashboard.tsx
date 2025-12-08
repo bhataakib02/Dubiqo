@@ -1,18 +1,18 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  Users, 
-  FolderKanban, 
-  FileText, 
-  Calendar, 
-  IndianRupee, 
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Users,
+  FolderKanban,
+  FileText,
+  Calendar,
+  IndianRupee,
   Ticket,
   TrendingUp,
-  BarChart
-} from "lucide-react";
+  BarChart,
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -21,7 +21,7 @@ export default function AdminDashboard() {
     quotes: 0,
     bookings: 0,
     invoices: 0,
-    tickets: 0
+    tickets: 0,
   });
 
   useEffect(() => {
@@ -38,14 +38,14 @@ export default function AdminDashboard() {
         { count: quotesCount },
         { count: bookingsCount },
         { count: invoicesCount },
-        { count: ticketsCount }
+        { count: ticketsCount },
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('projects').select('*', { count: 'exact', head: true }),
         supabase.from('quotes').select('*', { count: 'exact', head: true }),
         supabase.from('bookings').select('*', { count: 'exact', head: true }),
         supabase.from('invoices').select('*', { count: 'exact', head: true }),
-        supabase.from('tickets').select('*', { count: 'exact', head: true })
+        supabase.from('tickets').select('*', { count: 'exact', head: true }),
       ]);
 
       setStats({
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
         quotes: quotesCount || 0,
         bookings: bookingsCount || 0,
         invoices: invoicesCount || 0,
-        tickets: ticketsCount || 0
+        tickets: ticketsCount || 0,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -62,12 +62,48 @@ export default function AdminDashboard() {
   };
 
   const statCards = [
-    { title: "Total Users", value: stats.users, icon: Users, link: "/admin/users", color: "text-blue-500" },
-    { title: "Active Projects", value: stats.projects, icon: FolderKanban, link: "/admin/projects", color: "text-green-500" },
-    { title: "Pending Quotes", value: stats.quotes, icon: FileText, link: "/admin/quotes", color: "text-yellow-500" },
-    { title: "Upcoming Bookings", value: stats.bookings, icon: Calendar, link: "/admin/bookings", color: "text-purple-500" },
-    { title: "Invoices", value: stats.invoices, icon: IndianRupee, link: "/admin/invoices", color: "text-emerald-500" },
-    { title: "Open Tickets", value: stats.tickets, icon: Ticket, link: "/admin/tickets", color: "text-red-500" }
+    {
+      title: 'Total Users',
+      value: stats.users,
+      icon: Users,
+      link: '/admin/users',
+      color: 'text-blue-500',
+    },
+    {
+      title: 'Active Projects',
+      value: stats.projects,
+      icon: FolderKanban,
+      link: '/admin/projects',
+      color: 'text-green-500',
+    },
+    {
+      title: 'Pending Quotes',
+      value: stats.quotes,
+      icon: FileText,
+      link: '/admin/quotes',
+      color: 'text-yellow-500',
+    },
+    {
+      title: 'Upcoming Bookings',
+      value: stats.bookings,
+      icon: Calendar,
+      link: '/admin/bookings',
+      color: 'text-purple-500',
+    },
+    {
+      title: 'Invoices',
+      value: stats.invoices,
+      icon: IndianRupee,
+      link: '/admin/invoices',
+      color: 'text-emerald-500',
+    },
+    {
+      title: 'Open Tickets',
+      value: stats.tickets,
+      icon: Ticket,
+      link: '/admin/tickets',
+      color: 'text-red-500',
+    },
   ];
 
   return (
@@ -119,16 +155,34 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Link to="/admin/users">
-                <Button variant="outline" className="w-full justify-start">Manage Users</Button>
+                <Button variant="outline" className="w-full justify-start">
+                  Manage Users
+                </Button>
               </Link>
               <Link to="/admin/projects">
-                <Button variant="outline" className="w-full justify-start">View Projects</Button>
+                <Button variant="outline" className="w-full justify-start">
+                  View Projects
+                </Button>
               </Link>
               <Link to="/admin/invoices">
-                <Button variant="outline" className="w-full justify-start">Create Invoice</Button>
+                <Button variant="outline" className="w-full justify-start">
+                  Create Invoice
+                </Button>
               </Link>
               <Link to="/admin/downloads">
-                <Button variant="outline" className="w-full justify-start">Manage Downloads</Button>
+                <Button variant="outline" className="w-full justify-start">
+                  Manage Downloads
+                </Button>
+              </Link>
+              <Link to="/admin/portfolio">
+                <Button variant="outline" className="w-full justify-start">
+                  Manage Portfolio
+                </Button>
+              </Link>
+              <Link to="/admin/case-studies">
+                <Button variant="outline" className="w-full justify-start">
+                  Manage Case Studies
+                </Button>
               </Link>
             </CardContent>
           </Card>
@@ -163,9 +217,7 @@ export default function AdminDashboard() {
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Activity monitoring coming soon...
-              </p>
+              <p className="text-sm text-muted-foreground">Activity monitoring coming soon...</p>
             </CardContent>
           </Card>
         </div>
