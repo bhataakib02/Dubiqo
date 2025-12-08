@@ -2,11 +2,12 @@
 
 **Tagline:** "We build websites that build your business."
 
-Complete, production-ready, enterprise-grade platform built with React + Vite + TypeScript + Tailwind CSS + Lovable Cloud (Supabase).
+Complete, production-ready, enterprise-grade platform built with React + Vite + TypeScript + Tailwind CSS + Supabase.
 
 ## 🚀 Features
 
 ### Frontend
+
 - ✅ Modern React 18 + Vite + TypeScript
 - ✅ Tailwind CSS with custom design system
 - ✅ Shadcn UI components
@@ -14,7 +15,8 @@ Complete, production-ready, enterprise-grade platform built with React + Vite + 
 - ✅ SEO optimized
 - ✅ PWA support ready
 
-### Backend (Lovable Cloud)
+### Backend (Supabase)
+
 - ✅ Authentication (Email/Password, OAuth - Google/GitHub)
 - ✅ PostgreSQL database with RLS policies
 - ✅ File storage
@@ -23,6 +25,7 @@ Complete, production-ready, enterprise-grade platform built with React + Vite + 
 - ✅ Role-Based Access Control (RBAC)
 
 ### Public Pages
+
 - Home / Landing
 - Services (Websites, Portfolios, Billing Systems, Dashboards, Troubleshooting, Maintenance)
 - Portfolio & Case Studies
@@ -37,6 +40,7 @@ Complete, production-ready, enterprise-grade platform built with React + Vite + 
 - Legal (Privacy, Terms, Refund, SLA)
 
 ### Authentication System
+
 - Unified login (no role selection)
 - Auto-redirect based on user role:
   - `admin`/`staff` → `/admin/dashboard`
@@ -45,7 +49,9 @@ Complete, production-ready, enterprise-grade platform built with React + Vite + 
 - Email auto-confirm enabled for development
 
 ### Hidden Admin Portal
+
 **Path:** `/admin/*` (NO public links anywhere)
+
 - Blocked in robots.txt
 - Protected by RLS policies
 - Requires admin/staff role
@@ -61,7 +67,9 @@ Complete, production-ready, enterprise-grade platform built with React + Vite + 
   - Analytics
 
 ### Database Schema
+
 Comprehensive schema with:
+
 - `profiles` - User profiles
 - `user_roles` - RBAC (admin, staff, client)
 - `projects` - Client projects
@@ -80,6 +88,7 @@ Comprehensive schema with:
 ## 🛠️ Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 
@@ -94,27 +103,32 @@ npm run dev
 ```
 
 ### Environment Setup
-Lovable Cloud automatically provides:
-- `VITE_SUPABASE_URL` - Backend URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Public API key
-- `VITE_SUPABASE_PROJECT_ID` - Project identifier
 
-No manual .env configuration needed for backend!
+Configure your Supabase project:
+
+- `VITE_SUPABASE_URL` - Your Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon/public key
+- `VITE_SUPABASE_PROJECT_ID` - Your Supabase project ID
+
+Create a `.env` file with these variables.
 
 ### First Run
+
 1. The app will run on `http://localhost:5173`
 2. Sign up to create your first account (becomes a client by default)
-3. To create an admin user, manually update the `user_roles` table in Lovable Cloud
+3. To create an admin user, manually update the `user_roles` table in Supabase
 
 ## 🔐 Security
 
 ### Authentication
+
 - Email/password with secure hashing
 - OAuth providers (Google, GitHub)
-- Session management with Lovable Cloud
+- Session management with Supabase
 - Auto-redirect based on role
 
 ### Authorization (RLS)
+
 - Row Level Security on all tables
 - Role-based policies (admin, staff, client)
 - Clients can only see their own data
@@ -122,6 +136,7 @@ No manual .env configuration needed for backend!
 - Public content (blog, case studies) accessible to all when published
 
 ### Admin Access
+
 - Hidden admin portal (no public links)
 - Blocked from search engines (robots.txt)
 - Protected routes with role checking
@@ -142,7 +157,7 @@ src/
 │   ├── legal/               # Legal pages
 │   └── ...                  # Public pages
 ├── integrations/
-│   └── supabase/            # Lovable Cloud client
+│   └── supabase/            # Supabase client
 ├── utils/
 │   └── emailService.ts      # EmailJS integration
 └── hooks/                   # Custom React hooks
@@ -153,16 +168,17 @@ src/
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
 - **UI:** Shadcn UI, Lucide Icons
 - **Routing:** React Router v6
-- **Backend:** Lovable Cloud (Supabase)
-- **Auth:** Lovable Cloud Auth
+- **Backend:** Supabase
+- **Auth:** Supabase Auth
 - **Database:** PostgreSQL with RLS
-- **Storage:** Lovable Cloud Storage
+- **Storage:** Supabase Storage
 - **Functions:** Edge Functions (TypeScript)
 - **Email:** EmailJS (optional integration)
 
 ## 🚢 Deployment
 
 ### Frontend
+
 ```bash
 # Build for production
 npm run build
@@ -172,20 +188,24 @@ npm run preview
 ```
 
 Deploy to:
+
 - Vercel (recommended)
 - Netlify
 - Any static hosting
 
 ### Backend
-Lovable Cloud automatically deploys:
-- Database migrations
-- Edge Functions
-- Storage buckets
-- RLS policies
+
+Deploy to Supabase:
+
+- Database migrations (via Supabase CLI or Dashboard)
+- Edge Functions (via Supabase CLI)
+- Storage buckets (via Supabase Dashboard)
+- RLS policies (via migrations)
 
 ## 📊 Admin Features
 
 ### Dashboard
+
 - User statistics
 - Project overview
 - Quote requests
@@ -195,18 +215,21 @@ Lovable Cloud automatically deploys:
 - Real-time updates
 
 ### User Management
+
 - View all users
 - Manage roles
 - Activity tracking
 - Profile management
 
 ### Project Management
+
 - All client projects
 - Status tracking
 - Assignment
 - Timeline view
 
 ### Analytics
+
 - Usage statistics
 - Performance metrics
 - User behavior
@@ -215,6 +238,7 @@ Lovable Cloud automatically deploys:
 ## 🔒 RBAC System
 
 ### Roles
+
 1. **client** (default)
    - Own data access only
    - View own projects, quotes, invoices
@@ -237,9 +261,11 @@ Lovable Cloud automatically deploys:
 ## 📝 Important Notes
 
 ### Careers Module
+
 **REMOVED ENTIRELY** as per requirements. No career pages, application system, or related functionality.
 
 ### Hidden Admin Portal
+
 - Never appears in public navigation
 - Not linked from any public page
 - Blocked in robots.txt
@@ -247,10 +273,13 @@ Lovable Cloud automatically deploys:
 - Access only via direct URL for authenticated admin/staff
 
 ### Auto-Confirm Email
+
 Enabled for development. In production, disable and configure proper email service.
 
 ### Sample Data
+
 Includes seed data for:
+
 - Blog posts (5)
 - Case studies (3)
 - Downloads (3)
@@ -267,8 +296,9 @@ Private & Proprietary - Dubiqo Digital Solutions
 ## 🆘 Support
 
 For internal support:
+
 - Check documentation in `/docs`
-- Review backend in Lovable Cloud
+- Review backend in Supabase Dashboard
 - Check audit logs for admin actions
 
 ---

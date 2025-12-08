@@ -101,6 +101,31 @@ export default function ClientPortal() {
         navigate('/auth');
         return;
       }
+
+      // Check if user is admin or staff - redirect to admin dashboard
+      try {
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (roleError) {
+          console.error('Error checking role:', roleError);
+        }
+
+        console.log('User role check:', { userId: session.user.id, roleData, roleError });
+
+        if (roleData && (roleData.role === 'admin' || roleData.role === 'staff')) {
+          console.log('Redirecting admin/staff to admin dashboard');
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking role:', error);
+        // Continue to client portal if role check fails
+      }
+
       setUser(session.user);
       await loadUserData(session.user.id);
       setIsLoading(false);

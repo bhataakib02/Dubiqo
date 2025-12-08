@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "migrate": "supabase db push",
-    "seed": "supabase db seed --file supabase/seeds/seed.sql",
+    "seed": "supabase db seed --file supabase/seeds/dummy_data.sql",
     "prepare": "husky install"
   },
   "dependencies": {

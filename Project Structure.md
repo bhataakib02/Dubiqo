@@ -1,9 +1,9 @@
 # Dubiqo — Monorepo (React + Vite + Tailwind + Supabase)
 
-**Dubiqo Digital Solutions** — *We build websites that build your business.*
+**Dubiqo Digital Solutions** — _We build websites that build your business._
 
 This repository is a production-ready monorepo scaffold for Dubiqo.
-Stack: **React + Vite + TypeScript + Tailwind** (frontend) and **Supabase / Lovable Cloud** (Auth, Postgres, Storage, Edge Functions, Realtime). All interactive flows (quotes, bookings, invoices, chat, analytics) are implemented as server-backed features via Supabase Edge Functions. The Admin Portal exists and is fully functional **but intentionally hidden** from the public site.
+Stack: **React + Vite + TypeScript + Tailwind** (frontend) and **Supabase** (Auth, Postgres, Storage, Edge Functions, Realtime). All interactive flows (quotes, bookings, invoices, chat, analytics) are implemented as server-backed features via Supabase Edge Functions. The Admin Portal exists and is fully functional **but intentionally hidden** from the public site.
 
 > ⚠️ **Careers module removed** — no careers routes, tables, functions, or admin UI exist in this repo.
 
@@ -11,24 +11,25 @@ Stack: **React + Vite + TypeScript + Tailwind** (frontend) and **Supabase / Lova
 
 ## Table of contents
 
-* [Project structure](#project-structure)
-* [Quickstart — local dev](#quickstart---local-dev)
-* [Environment variables](#environment-variables)
-* [Scripts](#scripts)
-* [Supabase: migrations & seeds](#supabase-migrations--seeds)
-* [Edge Functions](#edge-functions)
-* [Admin Portal — hidden rules](#admin-portal---hidden-rules)
-* [Auth & RBAC](#auth--rbac)
-* [Testing & CI](#testing--ci)
-* [Deployment](#deployment)
-* [Observability & Security notes](#observability--security-notes)
-* [Acceptance criteria](#acceptance-criteria)
-* [Roadmap & next steps](#roadmap--next-steps)
-* [License](#license)
+- [Project structure](#project-structure)
+- [Quickstart — local dev](#quickstart---local-dev)
+- [Environment variables](#environment-variables)
+- [Scripts](#scripts)
+- [Supabase: migrations & seeds](#supabase-migrations--seeds)
+- [Edge Functions](#edge-functions)
+- [Admin Portal — hidden rules](#admin-portal---hidden-rules)
+- [Auth & RBAC](#auth--rbac)
+- [Testing & CI](#testing--ci)
+- [Deployment](#deployment)
+- [Observability & Security notes](#observability--security-notes)
+- [Acceptance criteria](#acceptance-criteria)
+- [Roadmap & next steps](#roadmap--next-steps)
+- [License](#license)
 
 ---
 
 ## Project structure
+
 ```txt
 dubiqo/
 ├─ .github/
@@ -86,7 +87,7 @@ dubiqo/
 ├─ supabase/
 │  ├─ migrations/                 # SQL schema migrations
 │  ├─ seeds/
-│  │  └─ seed.sql
+│  │  └─ dummy_data.sql
 │  ├─ policies/
 │  │  └─ rls_policies.sql
 │  └─ functions/                  # Edge Functions
@@ -203,7 +204,7 @@ Root `package.json` exposes workspace scripts:
     "test:e2e": "playwright test",
     "storybook": "pnpm --filter @dubiqo/ui storybook",
     "migrate": "supabase db push --file supabase/migrations",
-    "seed": "supabase db seed --file supabase/seeds/seed.sql"
+    "seed": "supabase db seed --file supabase/seeds/dummy_data.sql"
   }
 }
 ```
@@ -212,13 +213,13 @@ Root `package.json` exposes workspace scripts:
 
 ## Supabase: migrations & seeds
 
-* All SQL migrations live under `supabase/migrations/` (timestamped SQL files).
-* Seeds under `supabase/seeds/seed.sql` provide sample projects, case studies, blog posts, sample admin & client accounts, quotes, bookings, invoices.
-* Run migrations with Supabase CLI:
+- All SQL migrations live under `supabase/migrations/` (timestamped SQL files).
+- Seeds under `supabase/seeds/dummy_data.sql` provide sample projects, case studies, blog posts, sample admin & client accounts, quotes, bookings, invoices.
+- Run migrations with Supabase CLI:
 
 ```bash
 supabase migration run
-supabase db seed --file supabase/seeds/seed.sql
+supabase db seed --file supabase/seeds/dummy_data.sql
 ```
 
 ---
@@ -227,88 +228,88 @@ supabase db seed --file supabase/seeds/seed.sql
 
 Edge Functions are TypeScript folders under `supabase/functions/`. Each must:
 
-* Validate input (Zod).
-* Authenticate requests when necessary (supabase JWT or service role).
-* Use service role key only in server-side contexts (Edge Functions).
-* Log actions to `audit_logs`.
+- Validate input (Zod).
+- Authenticate requests when necessary (supabase JWT or service role).
+- Use service role key only in server-side contexts (Edge Functions).
+- Log actions to `audit_logs`.
 
 List of core functions:
 
-* `quote-create` — save quotes and email notifications.
-* `bookings-create` — transactional booking reservation + ICS generation.
-* `create-checkout-session` — create Stripe checkout session.
-* `webhooks/stripe` — handle Stripe webhooks (verify signature).
-* `telemetry-ingest` — store events.
-* `ai-insights` — call OpenAI for analytics insights.
-* `ticket-create`, `ticket-reply`, `ai-ticket-assist`.
-* `presign-upload`, `admin/backup`, `admin/restore`, integrations (HubSpot/QuickBooks).
+- `quote-create` — save quotes and email notifications.
+- `bookings-create` — transactional booking reservation + ICS generation.
+- `create-checkout-session` — create Stripe checkout session.
+- `webhooks/stripe` — handle Stripe webhooks (verify signature).
+- `telemetry-ingest` — store events.
+- `ai-insights` — call OpenAI for analytics insights.
+- `ticket-create`, `ticket-reply`, `ai-ticket-assist`.
+- `presign-upload`, `admin/backup`, `admin/restore`, integrations (HubSpot/QuickBooks).
 
 ---
 
 ## Admin Portal — hidden rules (MUST FOLLOW)
 
-* **No public links**: Do not include any link to `/admin` in header, footer, sitemap, or search.
-* **Robots**: Add `Disallow: /admin` to `public/robots.txt`. Add `<meta name="robots" content="noindex,nofollow">` in admin pages.
-* **Unified login**: Login page is the same for all users — no role selection.
-* **Auto-redirect after login**:
+- **No public links**: Do not include any link to `/admin` in header, footer, sitemap, or search.
+- **Robots**: Add `Disallow: /admin` to `public/robots.txt`. Add `<meta name="robots" content="noindex,nofollow">` in admin pages.
+- **Unified login**: Login page is the same for all users — no role selection.
+- **Auto-redirect after login**:
 
   ```js
-  if (profile.role === 'admin' || profile.role === 'staff') redirect('/admin')
-  else if (profile.role === 'client') redirect('/client-portal')
-  else redirect('/')
+  if (profile.role === 'admin' || profile.role === 'staff') redirect('/admin');
+  else if (profile.role === 'client') redirect('/client-portal');
+  else redirect('/');
   ```
-* **Server-side enforcement**: Admin endpoints must check role server-side (Edge Functions or RLS). Client-side gating alone is insufficient.
-* **Audit logs**: Admin actions (impersonation, invoice edits, deletes) must be logged in `audit_logs`.
-* **403 on unauthorized access**: If a non-admin attempts `/admin`, return 403 or redirect to home.
+
+- **Server-side enforcement**: Admin endpoints must check role server-side (Edge Functions or RLS). Client-side gating alone is insufficient.
+- **Audit logs**: Admin actions (impersonation, invoice edits, deletes) must be logged in `audit_logs`.
+- **403 on unauthorized access**: If a non-admin attempts `/admin`, return 403 or redirect to home.
 
 ---
 
 ## Auth & RBAC
 
-* Supabase Auth used for signup/login.
-* `profiles` table stores `role`.
-* Roles: `admin`, `staff`, `client`.
-* RLS policies grant selective access:
+- Supabase Auth used for signup/login.
+- `profiles` table stores `role`.
+- Roles: `admin`, `staff`, `client`.
+- RLS policies grant selective access:
+  - `clients` can only read their own `projects`, `quotes`, `invoices`, `tickets`.
+  - `staff` and `admin` have broader access.
 
-  * `clients` can only read their own `projects`, `quotes`, `invoices`, `tickets`.
-  * `staff` and `admin` have broader access.
-* Admin accounts are created through seeds or admin invite flow.
-* Admins should enable MFA in production.
+- Admin accounts are created through seeds or admin invite flow.
+- Admins should enable MFA in production.
 
 ---
 
 ## Testing & CI
 
-* **Unit tests**: `tests/unit/` (Vitest / Jest). Core logic: quote calculator, booking validation, webhook handler.
-* **E2E tests**: Playwright in `tests/e2e/`. Tests: signup/login, quote create, booking create, Stripe checkout simulation, file upload.
-* **Accessibility**: Axe checks integrated in CI.
-* **Visual tests**: Chromatic/Percy for Storybook stories.
-* **Load tests**: `k6` scripts available in `tests/load/`.
-* **GitHub Actions** workflows:
-
-  * `ci.yml` runs lint, test, storybook build, accessibility, Lighthouse.
-  * `e2e.yml` runs Playwright.
-  * `deploy.yml` builds and deploys frontend + Edge Functions.
+- **Unit tests**: `tests/unit/` (Vitest / Jest). Core logic: quote calculator, booking validation, webhook handler.
+- **E2E tests**: Playwright in `tests/e2e/`. Tests: signup/login, quote create, booking create, Stripe checkout simulation, file upload.
+- **Accessibility**: Axe checks integrated in CI.
+- **Visual tests**: Chromatic/Percy for Storybook stories.
+- **Load tests**: `k6` scripts available in `tests/load/`.
+- **GitHub Actions** workflows:
+  - `ci.yml` runs lint, test, storybook build, accessibility, Lighthouse.
+  - `e2e.yml` runs Playwright.
+  - `deploy.yml` builds and deploys frontend + Edge Functions.
 
 ---
 
 ## Deployment
 
-* Frontend: static build deployed to Vercel (recommended) or Supabase static hosting.
-* Edge Functions: deployed to Supabase (Lovable Cloud) via CLI in CI.
-* Set production environment variables in GitHub/host provider secrets.
-* Use Stripe test keys for testing; use Stripe CLI to forward webhooks locally.
+- Frontend: static build deployed to Vercel (recommended) or Supabase static hosting.
+- Edge Functions: deployed to Supabase via CLI in CI.
+- Set production environment variables in GitHub/host provider secrets.
+- Use Stripe test keys for testing; use Stripe CLI to forward webhooks locally.
 
 ---
 
 ## Observability & Security notes
 
-* Instrument frontend & Edge Functions with OpenTelemetry (sample wiring included).
-* Send errors to Sentry (client + server).
-* Store logs as structured JSON; include `request_id`.
-* Provide Prometheus-exporter guidance and sample Grafana dashboards in `infra/`.
-* Recommend using Vault/KMS for rotating keys in production.
-* Run OWASP ZAP scans and Snyk dependency checks in CI.
+- Instrument frontend & Edge Functions with OpenTelemetry (sample wiring included).
+- Send errors to Sentry (client + server).
+- Store logs as structured JSON; include `request_id`.
+- Provide Prometheus-exporter guidance and sample Grafana dashboards in `infra/`.
+- Recommend using Vault/KMS for rotating keys in production.
+- Run OWASP ZAP scans and Snyk dependency checks in CI.
 
 ---
 
@@ -328,17 +329,17 @@ List of core functions:
 
 ## Roadmap & next steps
 
-* **Phase 1 (Core)**: Public site, client portal, quote, booking, invoice/payment, Supabase migrations, one Edge Function (`quote-create`).
-* **Phase 2 (Admin + AI)**: Hidden admin portal, ai-ticket-assist, ai-insights, telemetry ingestion, Stripe webhook handling.
-* **Phase 3 (Infra & Enterprise)**: Backups, feature flags governance, marketplace + referral, Terraform infra templates, OPA policy checks, multi-region patterns.
+- **Phase 1 (Core)**: Public site, client portal, quote, booking, invoice/payment, Supabase migrations, one Edge Function (`quote-create`).
+- **Phase 2 (Admin + AI)**: Hidden admin portal, ai-ticket-assist, ai-insights, telemetry ingestion, Stripe webhook handling.
+- **Phase 3 (Infra & Enterprise)**: Backups, feature flags governance, marketplace + referral, Terraform infra templates, OPA policy checks, multi-region patterns.
 
 ---
 
 ## Troubleshooting
 
-* If Edge Functions fail locally: ensure Supabase CLI is running and env vars set.
-* Stripe webhooks failing: use Stripe CLI to forward webhooks and verify webhook secret matches `STRIPE_WEBHOOK_SECRET`.
-* RLS blocking access: check `supabase/policies/` for correct policy definitions and test using Supabase SQL console.
+- If Edge Functions fail locally: ensure Supabase CLI is running and env vars set.
+- Stripe webhooks failing: use Stripe CLI to forward webhooks and verify webhook secret matches `STRIPE_WEBHOOK_SECRET`.
+- RLS blocking access: check `supabase/policies/` for correct policy definitions and test using Supabase SQL console.
 
 ---
 
@@ -356,8 +357,8 @@ If you need help setting up Supabase, Stripe, or OpenAI, include the service acc
 
 If you want, I can now:
 
-* Produce this file as an actual `README.md` with front-matter and project badges.
-* Generate the initial skeleton files for `apps/web` and one sample Edge Function (`quote-create`) so you have a runnable Phase 1.
-* Export `.env.example` content ready to paste.
+- Produce this file as an actual `README.md` with front-matter and project badges.
+- Generate the initial skeleton files for `apps/web` and one sample Edge Function (`quote-create`) so you have a runnable Phase 1.
+- Export `.env.example` content ready to paste.
 
 Which would you like next?
