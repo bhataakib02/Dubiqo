@@ -1,0 +1,19 @@
+project_id = "ymsicujoyqfjlheorwos"
+
+[functions.quote-create]
+verify_jwt = false
+
+[functions.projects-create]
+verify_jwt = true
+
+[functions.ticket-create]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.telemetry-ingest]
+verify_jwt = false

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Block admin portal from search engines
+Disallow: /admin
+Disallow: /admin/
+
+# Block auth pages
+Disallow: /auth
+Disallow: /client-portal
+
+Sitemap: https://dubiqo.com/sitemap.xml
