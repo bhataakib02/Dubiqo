@@ -187,7 +187,7 @@ export default function AdminUsers() {
 
       const staffOnly = staffOnlyParam ?? staffOnlyView;
       if (staffOnly && myClientIds.size > 0) {
-        usersWithRoles = usersWithRoles.filter((u) => myClientIds.has(u.id));
+        usersWithRoles = usersWithRoles.filter((u) => u.role === 'client' && myClientIds.has(u.id));
       }
 
       setUsers(usersWithRoles);

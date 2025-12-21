@@ -3,16 +3,23 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Ticket, FolderKanban, FileText, Users } from 'lucide-react';
+import { BarChart, Ticket, FolderKanban, FileText, Users, Clock, Search as SearchIcon } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 export default function StaffDashboard() {
   const [assignedTickets, setAssignedTickets] = useState<number | null>(null);
   const [openProjects, setOpenProjects] = useState<number | null>(null);
   const [pendingQuotes, setPendingQuotes] = useState<number | null>(null);
   const [recentClients, setRecentClients] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     loadStaffStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadStaffStats = async () => {
@@ -25,11 +32,7 @@ export default function StaffDashboard() {
       if (!user) return;
 
       // First, get tickets assigned to this staff member to discover "their" clients/projects
-      const {
-        data: myTickets,
-        error: ticketsError,
-        count,
-      } = await supabase
+      const { data: myTickets, error: ticketsError, count } = await supabase
         .from('tickets')
         .select('client_id, project_id', { count: 'exact', head: false })
         .eq('assigned_to', user.id)
@@ -50,7 +53,7 @@ export default function StaffDashboard() {
       const clientIdArray = Array.from(clientIds);
       const projectIdArray = Array.from(projectIds);
 
-      setAssignedTickets(count ?? myTickets?.length ?? 0);
+      setAssignedTickets(count ?? (myTickets?.length ?? 0));
 
       // If no related clients/projects, remaining stats are 0
       if (clientIdArray.length === 0 && projectIdArray.length === 0) {
@@ -89,20 +92,21 @@ export default function StaffDashboard() {
       setOpenProjects(projectsRes.count ?? 0);
       setPendingQuotes(quotesRes.count ?? 0);
       setRecentClients(clientsRes.count ?? 0);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading staff dashboard stats:', error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-[#222739] to-[#171921] noise">
       <header className="border-b bg-card/80 backdrop-blur">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">Staff Workspace</h1>
-              <p className="text-sm text-muted-foreground">
-                Focused view for support and delivery teams.
+              <h1 className="gradient-text text-3xl font-bold tracking-tight">Staff Workspace</h1>
+              <p className="text-sm text-muted-foreground text-balance">
+                Focused view for support and delivery teams. Welcome back!
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -113,12 +117,30 @@ export default function StaffDashboard() {
               </Link>
             </div>
           </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-2 mt-4">
+            <div className="relative w-full md:w-96 flex items-center">
+              <SearchIcon className="absolute left-3 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchValue}
+                onChange={e => setSearchValue(e.target.value)}
+                className="pl-9 pr-4 bg-background/70 focus:ring-1 focus:ring-primary rounded-xl focus:bg-background"
+                placeholder="Quick search tickets, projects, quotes..."
+                type="search"
+                autoComplete="off"
+              />
+              <span className="sr-only">Quick search</span>
+            </div>
+            <div className="ml-2 text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap">
+              <Clock className="inline w-4 h-4 mr-1 text-primary/80" />
+              {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Loading...'}
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <main className="container mx-auto px-4 py-8 space-y-10">
         {/* Staff quick access */}
-        <section className="rounded-xl border border-border/60 bg-card/70 px-4 py-4 shadow-sm">
+        <section className="rounded-xl border border-border/60 bg-card/70 px-4 py-4 shadow-sm glass gradient-subtle">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-2">
               <BarChart className="h-5 w-5 text-primary" />
@@ -164,49 +186,108 @@ export default function StaffDashboard() {
         </section>
 
         {/* Staff stats */}
-        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border/70 bg-card/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Assigned Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold tracking-tight">{assignedTickets ?? '—'}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/70 bg-card/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Open Projects
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold tracking-tight">{openProjects ?? '—'}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/70 bg-card/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pending Quotes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold tracking-tight">{pendingQuotes ?? '—'}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border/70 bg-card/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                New Clients (7 days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold tracking-tight">{recentClients ?? '—'}</p>
-            </CardContent>
-          </Card>
+        <section className="grid gap-7 md:grid-cols-2 lg:grid-cols-4">
+          {/* Assigned Tickets Card */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/admin/tickets" state={{ from: 'staff' }} style={{ textDecoration: 'none' }}>
+                <Card className="glass-hover card-hover border-primary/60 relative overflow-hidden cursor-pointer group">
+                  <div className="absolute -top-7 -right-10 opacity-20 scale-150 group-hover:opacity-35 transition"><Ticket className="w-24 h-24 text-primary" /></div>
+                  <CardHeader className="pb-2 z-10">
+                    <CardTitle className="text-sm font-semibold text-primary flex items-center gap-2">
+                      <Ticket className="w-5 h-5 text-primary shrink-0" /> Assigned Tickets
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold tracking-tight mb-1">
+                      {assignedTickets === null ? <Skeleton className="h-7 w-16" /> : assignedTickets}
+                    </p>
+                    <span className="text-[12px] text-muted-foreground">Tickets currently assigned to you</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Open support or delivery tickets assigned to you.</TooltipContent>
+          </Tooltip>
+
+          {/* Open Projects Card */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/admin/projects" state={{ from: 'staff' }} style={{ textDecoration: 'none' }}>
+                <Card className="glass-hover card-hover border-accent/60 relative overflow-hidden cursor-pointer group">
+                  <div className="absolute -top-7 -right-10 opacity-20 scale-150 group-hover:opacity-35 transition"><FolderKanban className="w-24 h-24 text-accent" /></div>
+                  <CardHeader className="pb-2 z-10">
+                    <CardTitle className="text-sm font-semibold text-accent flex items-center gap-2">
+                      <FolderKanban className="w-5 h-5 text-accent shrink-0" /> Open Projects
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold tracking-tight mb-1">
+                      {openProjects === null ? <Skeleton className="h-7 w-16" /> : openProjects}
+                    </p>
+                    <span className="text-[12px] text-muted-foreground">Active projects you’re involved in</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Projects in active states where you have assigned tickets.</TooltipContent>
+          </Tooltip>
+
+          {/* Pending Quotes Card */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/admin/quotes" state={{ from: 'staff' }} style={{ textDecoration: 'none' }}>
+                <Card className="glass-hover card-hover border-warning/50 relative overflow-hidden cursor-pointer group">
+                  <div className="absolute -top-7 -right-10 opacity-15 scale-150 group-hover:opacity-30 transition"><FileText className="w-24 h-24 text-warning" /></div>
+                  <CardHeader className="pb-2 z-10">
+                    <CardTitle className="text-sm font-semibold text-warning flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-warning shrink-0" /> Pending Quotes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold tracking-tight mb-1">
+                      {pendingQuotes === null ? <Skeleton className="h-7 w-16" /> : pendingQuotes}
+                    </p>
+                    <span className="text-[12px] text-muted-foreground">Quotes awaiting client action</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Open/pending project/service quotes for your assigned clients.</TooltipContent>
+          </Tooltip>
+
+          {/* New Clients Card */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/admin/users" state={{ from: 'staff' }} style={{ textDecoration: 'none' }}>
+                <Card className="glass-hover card-hover border-success/50 relative overflow-hidden cursor-pointer group">
+                  <div className="absolute -top-7 -right-10 opacity-15 scale-150 group-hover:opacity-30 transition"><Users className="w-24 h-24 text-success" /></div>
+                  <CardHeader className="pb-2 z-10">
+                    <CardTitle className="text-sm font-semibold text-success flex items-center gap-2">
+                      <Users className="w-5 h-5 text-success shrink-0" /> New Clients (7 days)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-4xl font-bold tracking-tight mb-1">
+                      {recentClients === null ? <Skeleton className="h-7 w-16" /> : recentClients}
+                    </p>
+                    <span className="text-[12px] text-muted-foreground">Clients you worked with, recently joined</span>
+                  </CardContent>
+                </Card>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Clients newly onboarded in the past 7 days from your assigned list.</TooltipContent>
+          </Tooltip>
         </section>
+        {/* Recent Activity Feed (Placeholder for now) */}
+        <section className="rounded-xl border border-border/70 bg-card/70 shadow-sm mt-10 py-6 px-6 glass">
+          <h2 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><BarChart className="w-5 h-5" />Recent Activity</h2>
+          <Separator className="mb-4" />
+          <p className="text-muted-foreground text-sm flex items-center"><span className="mr-1">Coming soon:</span> Your recent tickets, project updates, and key events will appear here for an at-a-glance overview.</p>
+        </section>
+
       </main>
     </div>
   );
 }
+

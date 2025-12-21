@@ -147,7 +147,15 @@ export default function AdminQuotes() {
 
       let result = data || [];
       if (staffOnlyView && myClientIds.size > 0) {
-        result = result.filter((q: any) => q.client_id && myClientIds.has(q.client_id));
+        // Only quotes whose client is both in myClientIds and the client has the role 'client'
+        const clientRoleMap = new Map<string, string>();
+        try {
+          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+          (roles || []).forEach((r: any) => {
+            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
+          });
+        } catch {}
+        result = result.filter((q: any) => q.client_id && myClientIds.has(q.client_id) && clientRoleMap.has(q.client_id));
       }
       setQuotes(result);
     } catch (error) {

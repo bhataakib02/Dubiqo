@@ -1,50 +1,27 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Plus, RefreshCw, FolderKanban, Eye, Edit, Trash2, Search } from 'lucide-react';
-import { toast } from 'sonner';
-import type { Tables } from '@/integrations/supabase/types';
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Plus, RefreshCw, FolderKanban, Eye, Edit, Trash2, Search } from "lucide-react";
+import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/types";
 
-type ProjectWithClient = Tables<'projects'> & {
+type ProjectWithClient = Tables<"projects"> & {
   profiles?: { full_name: string | null; email: string; client_code: string | null } | null;
 };
 
 type Profile = { id: string; email: string; full_name: string | null; client_code: string | null };
 
 const formatINR = (paise: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-  }).format(paise / 100);
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(paise / 100);
 };
 
 export default function AdminProjects() {
@@ -54,8 +31,8 @@ export default function AdminProjects() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [staffOnlyView, setStaffOnlyView] = useState(false);
   const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectWithClient | null>(null);
   const [viewingProject, setViewingProject] = useState<ProjectWithClient | null>(null);
@@ -66,12 +43,12 @@ export default function AdminProjects() {
   const backLabel = cameFromStaff ? 'Back to Staff Workspace' : 'Back to Dashboard';
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    client_id: '',
-    project_type: 'website',
-    status: 'discovery',
-    budget: '',
+    title: "",
+    description: "",
+    client_id: "",
+    project_type: "website",
+    status: "discovery",
+    budget: ""
   });
 
   useEffect(() => {
@@ -133,17 +110,14 @@ export default function AdminProjects() {
 
   const loadClients = async () => {
     if (!supabase) return;
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, client_code')
-      .order('email');
+    const { data } = await supabase.from('profiles').select('id, email, full_name, client_code').order('email');
     setClients(data || []);
   };
 
   const loadProjects = async () => {
     if (!supabase) return;
     setIsLoading(true);
-
+    
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -154,7 +128,15 @@ export default function AdminProjects() {
 
       let result = data || [];
       if (staffOnlyView && myClientIds.size > 0) {
-        result = result.filter((p: any) => myClientIds.has(p.client_id));
+        // Only projects whose client is both in myClientIds and the client has the role 'client'
+        const clientRoleMap = new Map<string, string>();
+        try {
+          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+          (roles || []).forEach((r: any) => {
+            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
+          });
+        } catch {}
+        result = result.filter((p: any) => myClientIds.has(p.client_id) && clientRoleMap.has(p.client_id));
       }
       setProjects(result);
     } catch (error) {
@@ -179,7 +161,7 @@ export default function AdminProjects() {
         client_id: formData.client_id,
         project_type: formData.project_type,
         status: formData.status,
-        budget: formData.budget ? Math.round(parseFloat(formData.budget) * 100) : null,
+        budget: formData.budget ? Math.round(parseFloat(formData.budget) * 100) : null
       });
 
       if (error) throw error;
@@ -205,7 +187,7 @@ export default function AdminProjects() {
           project_type: formData.project_type,
           status: formData.status,
           budget: formData.budget ? Math.round(parseFloat(formData.budget) * 100) : null,
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .eq('id', editingProject.id);
 
@@ -238,71 +220,43 @@ export default function AdminProjects() {
     setEditingProject(project);
     setFormData({
       title: project.title,
-      description: project.description || '',
+      description: project.description || "",
       client_id: project.client_id,
       project_type: project.project_type,
       status: project.status,
-      budget: project.budget ? (Number(project.budget) / 100).toString() : '',
+      budget: project.budget ? (Number(project.budget) / 100).toString() : ""
     });
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      client_id: '',
-      project_type: 'website',
-      status: 'discovery',
-      budget: '',
-    });
+    setFormData({ title: "", description: "", client_id: "", project_type: "website", status: "discovery", budget: "" });
     setIsCreateOpen(false);
     setEditingProject(null);
   };
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = 
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.profiles?.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'discovery':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'planning':
-        return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-      case 'development':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'review':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      case 'completed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'cancelled':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default:
-        return 'bg-muted text-muted-foreground';
+      case 'discovery': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'planning': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+      case 'development': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'review': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+      case 'completed': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'cancelled': return 'bg-red-500/10 text-red-500 border-red-500/20';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
-  const projectTypes = [
-    'website',
-    'portfolio',
-    'billing-system',
-    'dashboard',
-    'maintenance',
-    'troubleshooting',
-  ];
-  const projectStatuses = [
-    'discovery',
-    'planning',
-    'development',
-    'review',
-    'completed',
-    'cancelled',
-  ];
+  const projectTypes = ["website", "portfolio", "billing-system", "dashboard", "maintenance", "troubleshooting"];
+  const projectStatuses = ["discovery", "planning", "development", "review", "completed", "cancelled"];
 
   return (
     <div className="min-h-screen bg-background">
@@ -321,12 +275,7 @@ export default function AdminProjects() {
                 <p className="text-muted-foreground">View and manage all projects</p>
               </div>
             </div>
-            <Button
-              onClick={() => {
-                resetForm();
-                setIsCreateOpen(true);
-              }}
-            >
+            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />
               New Project
             </Button>
@@ -345,24 +294,13 @@ export default function AdminProjects() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-48"
-                  />
+                  <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 w-48" />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {projectStatuses.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Button variant="outline" size="sm" onClick={loadProjects} disabled={isLoading}>
@@ -402,41 +340,24 @@ export default function AdminProjects() {
                         <TableCell>
                           <div>
                             <p>{project.profiles?.full_name || 'N/A'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {project.profiles?.email}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{project.profiles?.email}</p>
                           </div>
                         </TableCell>
+                        <TableCell><Badge variant="outline">{project.project_type}</Badge></TableCell>
                         <TableCell>
-                          <Badge variant="outline">{project.project_type}</Badge>
+                          <Badge variant="outline" className={getStatusColor(project.status)}>{project.status}</Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getStatusColor(project.status)}>
-                            {project.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {project.budget ? formatINR(Number(project.budget)) : '-'}
-                        </TableCell>
+                        <TableCell>{project.budget ? formatINR(Number(project.budget)) : '-'}</TableCell>
                         <TableCell>{new Date(project.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setViewingProject(project)}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setViewingProject(project)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(project)}
-                              className="text-destructive hover:text-destructive"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(project)} className="text-destructive hover:text-destructive">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -460,34 +381,19 @@ export default function AdminProjects() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Title *</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Project title"
-              />
+              <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Project title" />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
             </div>
             <div className="space-y-2">
               <Label>Client *</Label>
-              <Select
-                value={formData.client_id}
-                onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
+              <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>
                   {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.full_name || c.email} {c.client_code && `(${c.client_code})`}
-                    </SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.full_name || c.email} {c.client_code && `(${c.client_code})`}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -495,58 +401,31 @@ export default function AdminProjects() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Type *</Label>
-                <Select
-                  value={formData.project_type}
-                  onValueChange={(value) => setFormData({ ...formData, project_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={formData.project_type} onValueChange={(value) => setFormData({ ...formData, project_type: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {projectTypes.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
+                    {projectTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {projectStatuses.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {projectStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
               <Label>Budget (₹)</Label>
-              <Input
-                type="number"
-                value={formData.budget}
-                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                placeholder="0.00"
-              />
+              <Input type="number" value={formData.budget} onChange={(e) => setFormData({ ...formData, budget: e.target.value })} placeholder="0.00" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>
-              Cancel
-            </Button>
-            <Button onClick={editingProject ? handleUpdate : handleCreate}>
-              {editingProject ? 'Update' : 'Create'}
-            </Button>
+            <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            <Button onClick={editingProject ? handleUpdate : handleCreate}>{editingProject ? 'Update' : 'Create'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -572,9 +451,7 @@ export default function AdminProjects() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Client</p>
-                  <p className="font-medium">
-                    {viewingProject.profiles?.full_name || viewingProject.profiles?.email}
-                  </p>
+                  <p className="font-medium">{viewingProject.profiles?.full_name || viewingProject.profiles?.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Type</p>
@@ -584,15 +461,11 @@ export default function AdminProjects() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge variant="outline" className={getStatusColor(viewingProject.status)}>
-                    {viewingProject.status}
-                  </Badge>
+                  <Badge variant="outline" className={getStatusColor(viewingProject.status)}>{viewingProject.status}</Badge>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Budget</p>
-                  <p className="font-semibold">
-                    {viewingProject.budget ? formatINR(Number(viewingProject.budget)) : '-'}
-                  </p>
+                  <p className="font-semibold">{viewingProject.budget ? formatINR(Number(viewingProject.budget)) : '-'}</p>
                 </div>
               </div>
               <div>
@@ -602,9 +475,7 @@ export default function AdminProjects() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingProject(null)}>
-              Close
-            </Button>
+            <Button variant="outline" onClick={() => setViewingProject(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
