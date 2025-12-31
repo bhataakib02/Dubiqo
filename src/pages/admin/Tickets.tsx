@@ -83,9 +83,11 @@ export default function AdminTickets() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [assigningTicket, setAssigningTicket] = useState<TicketWithClient | null>(null);
   const [staffMembers, setStaffMembers] = useState<
-    Array<{ id: string; full_name: string | null; email: string }>
+    Array<{ id: string; full_name: string | null; email: string; role?: string }>
   >([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>('unassign');
+  const [projects, setProjects] = useState<Array<{ id: string; title: string; client_id: string }>>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('none');
 
   const location = useLocation();
   const cameFromStaff = (location.state as any)?.from === 'staff';
@@ -148,13 +150,43 @@ export default function AdminTickets() {
       const userIds = roles.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, metadata')
         .in('id', userIds);
 
-      setStaffMembers(profiles || []);
+      // Add descriptive role from metadata
+      const staffWithRoles = (profiles || []).map(p => {
+        const metadata = p.metadata as any;
+        const descriptiveRole = metadata?.role || metadata?.job_title || metadata?.position || 'staff';
+        return {
+          ...p,
+          role: descriptiveRole
+        };
+      });
+
+      setStaffMembers(staffWithRoles);
     } catch (error) {
       console.error('Error loading staff members:', error);
       setStaffMembers([]);
+    }
+  };
+
+  const loadProjectsForClient = async (clientId: string) => {
+    if (!supabase || !clientId) {
+      setProjects([]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, title, client_id')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      setProjects([]);
     }
   };
 
@@ -349,10 +381,15 @@ export default function AdminTickets() {
     }
   };
 
-  const handleAssignTicket = (ticket: TicketWithClient) => {
+  const handleAssignTicket = async (ticket: TicketWithClient) => {
     setOpenDropdownId(null); // Close dropdown
     setAssigningTicket(ticket);
     setSelectedStaffId(ticket.assigned_to || 'unassign');
+    setSelectedProjectId(ticket.project_id || 'none');
+    // Load projects for this ticket's client
+    if (ticket.client_id) {
+      await loadProjectsForClient(ticket.client_id);
+    }
     setIsAssignDialogOpen(true);
   };
 
@@ -364,9 +401,10 @@ export default function AdminTickets() {
 
     try {
       const isUnassigning = selectedStaffId === 'unassign';
-      const updateData: { assigned_to: string | null; updated_at: string; status?: string } = {
+      const updateData: { assigned_to: string | null; updated_at: string; status?: string; project_id?: string | null } = {
         assigned_to: isUnassigning ? null : selectedStaffId,
         updated_at: new Date().toISOString(),
+        project_id: selectedProjectId === 'none' ? null : selectedProjectId,
       };
 
       // Only auto-update status if assigning (not unassigning)
@@ -393,6 +431,8 @@ export default function AdminTickets() {
       setIsAssignDialogOpen(false);
       setAssigningTicket(null);
       setSelectedStaffId('unassign');
+      setSelectedProjectId('none');
+      setProjects([]);
       await loadTickets();
     } catch (error) {
       console.error('Error assigning ticket:', error);
@@ -849,12 +889,30 @@ export default function AdminTickets() {
                   <SelectItem value="unassign">Unassign</SelectItem>
                   {staffMembers.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
-                      {staff.full_name || staff.email}
+                      {staff.full_name || staff.email} {staff.role && `(${staff.role})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {assigningTicket?.client_id && (
+              <div className="space-y-2">
+                <Label htmlFor="assign-project">Assign to Project (Optional)</Label>
+                <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                  <SelectTrigger id="assign-project">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Project</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
@@ -862,6 +920,8 @@ export default function AdminTickets() {
                   setIsAssignDialogOpen(false);
                   setAssigningTicket(null);
                   setSelectedStaffId('unassign');
+                  setSelectedProjectId('none');
+                  setProjects([]);
                 }}
               >
                 Cancel

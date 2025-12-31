@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
@@ -63,17 +64,31 @@ export default function Downloads() {
     }
 
     try {
+      // Load all downloads (no requires_auth column in schema)
       const { data, error } = await supabase
         .from('downloads')
         .select('*')
-        .order('category', { ascending: true })
         .order('title', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading downloads:', error);
+        throw error;
+      }
+      
       setDownloads(data || []);
-    } catch (error) {
+      
+      // If no downloads, it's not necessarily an error - just empty
+      if (!data || data.length === 0) {
+        console.log('No downloads available in database');
+      }
+    } catch (error: any) {
       console.error('Error loading downloads:', error);
-      toast.error('Failed to load downloads');
+      // Only show error if it's not just an empty result
+      if (error?.code !== 'PGRST116') {
+        toast.error('Failed to load downloads', {
+          description: error?.message || 'Please try refreshing the page'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -85,45 +100,56 @@ export default function Downloads() {
     setDownloadingId(item.id);
     
     try {
-      // Get the file URL from storage
-      const { data: urlData, error: urlError } = await supabase
-        .storage
-        .from('downloads')
-        .createSignedUrl(item.file_path, 60); // 60 seconds expiry
-
-      if (urlError) {
-        // If file doesn't exist in storage, check if it's an external URL
-        if (item.file_path.startsWith('http')) {
-          window.open(item.file_path, '_blank');
-        } else {
-          throw urlError;
-        }
-      } else if (urlData?.signedUrl) {
-        // Trigger download
-        const link = document.createElement('a');
-        link.href = urlData.signedUrl;
-        link.download = item.title;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // Get file path/URL - handle both file_path and file_url columns
+      const filePath = item.file_path || (item as any).file_url;
+      
+      if (!filePath) {
+        throw new Error('File path not found');
       }
 
-      // Update download count
-      const { error: updateError } = await supabase
-        .from('downloads')
-        .update({ download_count: (item.download_count || 0) + 1 })
-        .eq('id', item.id);
+      // Check if it's an external URL
+      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+        window.open(filePath, '_blank');
+      } else {
+        // Get the file URL from storage
+        const { data: urlData, error: urlError } = await supabase
+          .storage
+          .from('downloads')
+          .createSignedUrl(filePath, 60); // 60 seconds expiry
 
-      if (!updateError) {
-        // Update local state
-        setDownloads(prev => 
-          prev.map(d => 
-            d.id === item.id 
-              ? { ...d, download_count: (d.download_count || 0) + 1 }
-              : d
-          )
-        );
+        if (urlError) {
+          throw urlError;
+        }
+
+        if (urlData?.signedUrl) {
+          // Trigger download
+          const link = document.createElement('a');
+          link.href = urlData.signedUrl;
+          link.download = item.title;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+
+      // Update download count (if column exists)
+      if ('download_count' in item) {
+        const { error: updateError } = await supabase
+          .from('downloads')
+          .update({ download_count: ((item.download_count as number) || 0) + 1 })
+          .eq('id', item.id);
+
+        if (!updateError) {
+          // Update local state
+          setDownloads(prev => 
+            prev.map(d => 
+              d.id === item.id 
+                ? { ...d, download_count: ((d.download_count as number) || 0) + 1 }
+                : d
+            )
+          );
+        }
       }
 
       toast.success(`Downloading ${item.title}`);
@@ -135,9 +161,9 @@ export default function Downloads() {
     }
   };
 
-  // Group downloads by category
+  // Group downloads by category (if category exists, otherwise show all together)
   const groupedDownloads = downloads.reduce((acc, item) => {
-    const category = item.category || 'Other';
+    const category = (item as any).category || 'All Downloads';
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -206,7 +232,9 @@ export default function Downloads() {
                             <div className={`w-12 h-12 rounded-lg bg-muted/50 flex items-center justify-center ${getIconColor(item.file_type)}`}>
                               <Icon className="w-6 h-6" />
                             </div>
-                            <Badge variant="outline">{item.category}</Badge>
+                            {(item as any).category && (
+                              <Badge variant="outline">{(item as any).category}</Badge>
+                            )}
                           </div>
                           <CardTitle className="text-xl mt-4">{item.title}</CardTitle>
                         </CardHeader>
@@ -218,9 +246,9 @@ export default function Downloads() {
                             <span>{formatFileSize(item.file_size)}</span>
                           </div>
                           
-                          {item.download_count !== null && item.download_count > 0 && (
+                          {(item as any).download_count !== null && (item as any).download_count > 0 && (
                             <p className="text-xs text-muted-foreground">
-                              {item.download_count} downloads
+                              {(item as any).download_count} downloads
                             </p>
                           )}
                           
@@ -263,7 +291,7 @@ export default function Downloads() {
             we'll prepare them for you.
           </p>
           <Button size="lg" asChild>
-            <a href="/contact">Request Materials</a>
+            <Link to="/contact">Request Materials</Link>
           </Button>
         </div>
       </Section>

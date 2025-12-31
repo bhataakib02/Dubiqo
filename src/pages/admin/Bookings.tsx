@@ -52,8 +52,7 @@ export default function AdminBookings() {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .order('date', { ascending: true })
-        .order('time_slot', { ascending: true });
+        .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
 

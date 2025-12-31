@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Select,
   SelectContent,
@@ -140,29 +141,68 @@ export default function AdminInvoices() {
   const loadClients = async () => {
     if (!supabase) return;
     try {
-      // Load all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, client_code')
-        .order('email');
-
-      if (profilesError) throw profilesError;
-
-      // Get admin and staff user IDs to exclude them from the client list
-      const { data: adminStaffRoles } = await supabase
+      // First, clear existing clients to avoid stale data
+      setClients([]);
+      
+      // Get all admin and staff user IDs to exclude them
+      // This ensures users who have both 'client' and 'staff'/'admin' roles are excluded
+      const { data: adminStaffRoles, error: excludeError } = await supabase
         .from('user_roles')
         .select('user_id')
         .in('role', ['admin', 'staff']);
 
-      if (adminStaffRoles && adminStaffRoles.length > 0) {
-        const adminStaffIds = new Set(adminStaffRoles.map((r) => r.user_id));
-        // Filter out admin and staff, show everyone else (clients and users without roles)
-        const clientProfiles = (profiles || []).filter((p) => !adminStaffIds.has(p.id));
-        setClients(clientProfiles);
-      } else {
-        // If no admin/staff roles found, show all profiles
-        setClients(profiles || []);
+      if (excludeError) {
+        console.error('Error loading admin/staff roles:', excludeError);
+        throw excludeError; // Fail early if we can't get the exclusion list
       }
+
+      const adminStaffIds = new Set<string>();
+      if (adminStaffRoles) {
+        adminStaffRoles.forEach((r) => adminStaffIds.add(r.user_id));
+      }
+
+      // Get all profiles that have a 'client' role
+      const { data: clientRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'client');
+
+      if (rolesError) throw rolesError;
+
+      if (!clientRoles || clientRoles.length === 0) {
+        console.log('No client roles found');
+        setClients([]);
+        return;
+      }
+
+      // Filter out any user IDs that are in the adminStaffIds set
+      const pureClientIds = clientRoles
+        .map((r) => r.user_id)
+        .filter((id) => !adminStaffIds.has(id));
+
+      if (pureClientIds.length === 0) {
+        console.log('No pure client IDs found after filtering');
+        setClients([]);
+        return;
+      }
+
+      // Load only pure client profiles (no admin/staff roles)
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, client_code')
+        .in('id', pureClientIds)
+        .order('email');
+
+      if (profilesError) throw profilesError;
+
+      console.log('Loaded clients:', {
+        totalClientRoles: clientRoles.length,
+        adminStaffIdsToExclude: adminStaffIds.size,
+        pureClientIdsAfterFilter: pureClientIds.length,
+        finalClientsLoaded: profiles?.length || 0
+      });
+
+      setClients(profiles || []);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast.error('Failed to load clients');
@@ -346,8 +386,9 @@ export default function AdminInvoices() {
     }
   };
 
-  const handleEdit = (invoice: InvoiceWithClient) => {
+  const handleEdit = async (invoice: InvoiceWithClient) => {
     setEditingInvoice(invoice);
+    await loadClients(); // Reload clients to ensure fresh filtered data
     // Database stores amounts as numeric (rupees), access as subtotal and tax
     const invoiceData = invoice as any;
     setFormData({
@@ -479,8 +520,9 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
               </div>
             </div>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 resetForm();
+                await loadClients(); // Reload clients to ensure fresh data
                 setIsCreateOpen(true);
               }}
             >
@@ -598,8 +640,12 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{invoice.client?.full_name || 'N/A'}</p>
-                            <p className="text-xs text-muted-foreground">{invoice.client?.email}</p>
+                            <p className="font-medium">
+                              {invoice.client?.full_name || invoice.client?.email || 'N/A'}
+                              {invoice.client?.client_code && (
+                                <span className="text-muted-foreground ml-1">({invoice.client.client_code})</span>
+                              )}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell className="font-semibold">
@@ -728,10 +774,11 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Due Date *</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={formData.due_date}
-                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, due_date: value })}
+                  placeholder="Select due date"
+                  fromDate={new Date()}
                 />
               </div>
               <div className="space-y-2">
@@ -787,7 +834,10 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
               <div>
                 <p className="text-sm text-muted-foreground">Client</p>
                 <p className="font-medium">
-                  {viewingInvoice.client?.full_name || viewingInvoice.client?.email}
+                  {viewingInvoice.client?.full_name || viewingInvoice.client?.email || 'N/A'}
+                  {viewingInvoice.client?.client_code && (
+                    <span className="text-muted-foreground ml-1">({viewingInvoice.client.client_code})</span>
+                  )}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-4">

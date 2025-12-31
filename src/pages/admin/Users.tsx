@@ -61,12 +61,14 @@ export default function AdminUsers() {
   const [staffOnlyView, setStaffOnlyView] = useState(false);
   const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [viewingUser, setViewingUser] = useState<UserWithRole | null>(null);
   const [editForm, setEditForm] = useState({
     full_name: '',
     company_name: '',
     phone: '',
+    client_code: '',
     role: 'client',
   });
   const [userStats, setUserStats] = useState<{
@@ -74,6 +76,7 @@ export default function AdminUsers() {
     projects: number;
     tickets: number;
   }>({ invoices: 0, projects: 0, tickets: 0 });
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const location = useLocation();
   const cameFromStaff = (location.state as any)?.from === 'staff';
@@ -138,38 +141,90 @@ export default function AdminUsers() {
   }, [initializeUsers]);
 
   useEffect(() => {
+    let filtered = users;
+
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter((user) => user.role === roleFilter);
+    }
+
+    // Apply search filter
     if (searchTerm) {
-      const filtered = users.filter(
+      filtered = filtered.filter(
         (user) =>
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.client_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.role.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(users);
     }
-  }, [searchTerm, users]);
+
+    setFilteredUsers(filtered);
+  }, [searchTerm, roleFilter, users]);
 
   const loadUsers = async (staffOnlyParam?: boolean) => {
-    if (!supabase) return;
+    if (!supabase) {
+      setIsLoading(false);
+      toast.error('Supabase client not available');
+      return;
+    }
     setIsLoading(true);
 
     try {
+      // First, check if user is authenticated and has proper role
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('User not authenticated:', userError);
+        toast.error('You must be logged in to view users');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check user's role
+      const { data: userRoles, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      if (roleCheckError) {
+        console.error('Error checking user role:', roleCheckError);
+      }
+
+      const isAdmin = userRoles?.some((r) => r.role === 'admin');
+      const isStaff = userRoles?.some((r) => r.role === 'staff');
+
+      if (!isAdmin && !isStaff) {
+        console.error('User does not have admin or staff role');
+        toast.error('You do not have permission to view users. Admin or staff role required.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Load profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name, company_name, phone, client_code, created_at')
         .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        console.error('Error code:', profilesError.code);
+        console.error('Error message:', profilesError.message);
+        console.error('Error details:', profilesError.details);
+        throw profilesError;
+      }
 
+      console.log('Loaded profiles:', profiles?.length || 0);
+
+      // Load roles
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) {
         console.warn('Warning: failed to load user_roles (RLS or permission issue)', rolesError);
+        console.warn('This may be normal if RLS is blocking. Continuing without roles...');
       }
 
       const roleMap = new Map<string, string>();
@@ -193,48 +248,114 @@ export default function AdminUsers() {
 
       setUsers(usersWithRoles);
       setFilteredUsers(usersWithRoles);
+
+      // Show info if no users found
+      if (usersWithRoles.length === 0 && !profilesError) {
+        console.log('No users found in database. This is normal if no users have been created yet.');
+      }
     } catch (error: any) {
       console.error('Error loading users:', error);
-      if (error?.status)
-        console.error('Status:', error.status, 'Details:', error?.details || error?.message);
-      toast.error('Failed to load users');
+      console.error('Error details:', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status
+      });
+      
+      let errorMessage = 'Failed to load users';
+      if (error?.code === 'PGRST301' || error?.message?.includes('permission denied')) {
+        errorMessage = 'Permission denied. Please ensure you have admin or staff role.';
+      } else if (error?.code === 'PGRST116') {
+        errorMessage = 'No users found in database.';
+      } else if (error?.message) {
+        errorMessage = `Failed to load users: ${error.message}`;
+      }
+      
+      toast.error(errorMessage, {
+        description: error?.hint || 'Check console for details'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadUserStats = async (userId: string) => {
+  const loadUserStats = async (userId: string, userRole: string) => {
     if (!supabase) return;
 
+    setLoadingStats(true);
     try {
-      const [invoicesRes, projectsRes, ticketsRes] = await Promise.all([
-        supabase
-          .from('invoices')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', userId),
-        supabase
-          .from('projects')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', userId),
-        supabase
+      if (userRole === 'client') {
+        // For clients: count their invoices, projects, and tickets
+        const [invoicesRes, projectsRes, ticketsRes] = await Promise.all([
+          supabase
+            .from('invoices')
+            .select('*', { count: 'exact', head: true })
+            .eq('client_id', userId),
+          supabase
+            .from('projects')
+            .select('*', { count: 'exact', head: true })
+            .eq('client_id', userId),
+          supabase
+            .from('tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('client_id', userId),
+        ]);
+
+        setUserStats({
+          invoices: invoicesRes.count || 0,
+          projects: projectsRes.count || 0,
+          tickets: ticketsRes.count || 0,
+        });
+      } else if (userRole === 'staff' || userRole === 'admin') {
+        // For staff/admin: count tickets assigned to them, projects they're assigned to
+        // First get assigned projects to use for invoice count
+        const { data: assignedProjects } = await (supabase as any)
+          .from('project_staff_assignments')
+          .select('project_id')
+          .eq('staff_id', userId);
+        
+        const projectIds = assignedProjects?.map((a: any) => a.project_id) || [];
+        const projectCount = projectIds.length;
+        
+        // Count tickets assigned to them
+        const ticketsRes = await supabase
           .from('tickets')
           .select('*', { count: 'exact', head: true })
-          .eq('client_id', userId),
-      ]);
+          .eq('assigned_to', userId);
 
-      setUserStats({
-        invoices: invoicesRes.count || 0,
-        projects: projectsRes.count || 0,
-        tickets: ticketsRes.count || 0,
-      });
+        // Count invoices for projects they're assigned to (if any)
+        let invoiceCount = 0;
+        if (projectIds.length > 0) {
+          const invoicesRes = await supabase
+            .from('invoices')
+            .select('*', { count: 'exact', head: true })
+            .in('project_id', projectIds);
+          invoiceCount = invoicesRes.count || 0;
+        }
+
+        setUserStats({
+          invoices: invoiceCount,
+          projects: projectCount,
+          tickets: ticketsRes.count || 0,
+        });
+      } else {
+        // Default: reset stats
+        setUserStats({ invoices: 0, projects: 0, tickets: 0 });
+      }
     } catch (error) {
       console.error('Error loading user stats:', error);
+      setUserStats({ invoices: 0, projects: 0, tickets: 0 });
+    } finally {
+      setLoadingStats(false);
     }
   };
 
   const handleView = async (user: UserWithRole) => {
     setViewingUser(user);
-    await loadUserStats(user.id);
+    // Reset stats first
+    setUserStats({ invoices: 0, projects: 0, tickets: 0 });
+    await loadUserStats(user.id, user.role);
   };
 
   const handleEdit = (user: UserWithRole) => {
@@ -243,49 +364,128 @@ export default function AdminUsers() {
       full_name: user.full_name || '',
       company_name: user.company_name || '',
       phone: user.phone || '',
+      client_code: user.client_code || '',
       role: user.role,
     });
   };
 
   const handleSaveEdit = async () => {
-    if (!supabase || !editingUser) return;
+    if (!supabase || !editingUser) {
+      toast.error('Missing required data');
+      return;
+    }
 
     try {
+      // Verify current user has admin/staff role
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        toast.error('You must be logged in to update users');
+        return;
+      }
+
+      const { data: currentUserRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const isAdmin = currentUserRoles?.some((r) => r.role === 'admin');
+      const isStaff = currentUserRoles?.some((r) => r.role === 'staff');
+
+      if (!isAdmin && !isStaff) {
+        toast.error('You do not have permission to update users');
+        return;
+      }
+
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          full_name: editForm.full_name,
-          company_name: editForm.company_name,
-          phone: editForm.phone,
+          full_name: editForm.full_name || null,
+          company_name: editForm.company_name || null,
+          phone: editForm.phone || null,
+          client_code: editForm.client_code.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editingUser.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        console.error('Error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        throw new Error(`Failed to update profile: ${profileError.message || 'Unknown error'}`);
+      }
 
       // Update role if changed
       if (editForm.role !== editingUser.role) {
-        const { error: deleteRoleError } = await supabase
+        // Try to use upsert first (handles both insert and update)
+        const { error: upsertRoleError } = await supabase
           .from('user_roles')
-          .delete()
-          .eq('user_id', editingUser.id);
+          .upsert(
+            { user_id: editingUser.id, role: editForm.role as 'admin' | 'staff' | 'client' },
+            { onConflict: 'user_id,role' }
+          );
 
-        if (deleteRoleError) throw deleteRoleError;
+        if (upsertRoleError) {
+          console.error('Error upserting role:', upsertRoleError);
+          console.error('Error details:', {
+            code: upsertRoleError.code,
+            message: upsertRoleError.message,
+            details: upsertRoleError.details,
+            hint: upsertRoleError.hint
+          });
 
-        const { error: insertRoleError } = await supabase
-          .from('user_roles')
-          .insert({ user_id: editingUser.id, role: editForm.role as 'admin' | 'staff' | 'client' });
+          // If upsert fails, try delete then insert
+          if (upsertRoleError.code === '42501' || upsertRoleError.message?.includes('row-level security')) {
+            // RLS is blocking - try delete then insert
+            const { error: deleteRoleError } = await supabase
+              .from('user_roles')
+              .delete()
+              .eq('user_id', editingUser.id);
 
-        if (insertRoleError) throw insertRoleError;
+            if (deleteRoleError && deleteRoleError.code !== 'PGRST116') {
+              console.warn('Error deleting old role (may not exist):', deleteRoleError);
+            }
+
+            // Try insert again
+            const { error: insertRoleError } = await supabase
+              .from('user_roles')
+              .insert({ user_id: editingUser.id, role: editForm.role as 'admin' | 'staff' | 'client' });
+
+            if (insertRoleError) {
+              // If still failing due to RLS, provide helpful error message
+              if (insertRoleError.code === '42501' || insertRoleError.message?.includes('row-level security')) {
+                throw new Error(
+                  'Cannot update role: RLS policy is blocking. Please ensure RLS is disabled on user_roles table. ' +
+                  'Run: ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;'
+                );
+              }
+              throw new Error(`Failed to update role: ${insertRoleError.message || 'Unknown error'}`);
+            }
+          } else if (upsertRoleError.code === '23505') {
+            // Unique constraint - role already exists, which is fine
+            console.log('Role already exists, continuing...');
+          } else {
+            throw new Error(`Failed to update role: ${upsertRoleError.message || 'Unknown error'}`);
+          }
+        }
       }
 
       toast.success('User updated successfully');
       setEditingUser(null);
-      loadUsers();
-    } catch (error) {
+      await loadUsers();
+    } catch (error: any) {
       console.error('Error updating user:', error);
-      toast.error('Failed to update user');
+      const errorMessage = error?.message || 'Failed to update user';
+      const errorDetails = error?.hint || error?.details || '';
+      
+      toast.error(errorMessage, {
+        description: errorDetails || 'Check console for details'
+      });
     }
   };
 
@@ -365,7 +565,18 @@ export default function AdminUsers() {
                     className="pl-9 w-64"
                   />
                 </div>
-                <Button variant="outline" size="sm" onClick={loadUsers} disabled={isLoading}>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={() => loadUsers()} disabled={isLoading}>
                   <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
@@ -380,9 +591,29 @@ export default function AdminUsers() {
             ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'No users match your search' : 'No users found'}
+                <p className="text-muted-foreground mb-2">
+                  {searchTerm || roleFilter !== 'all' 
+                    ? 'No users match your filters' 
+                    : 'No users found'}
                 </p>
+                {!searchTerm && roleFilter === 'all' && (
+                  <p className="text-sm text-muted-foreground">
+                    Users will appear here once they create accounts or are added to the system.
+                  </p>
+                )}
+                {(searchTerm || roleFilter !== 'all') && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setRoleFilter('all');
+                    }}
+                    className="mt-2"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -483,28 +714,49 @@ export default function AdminUsers() {
               </div>
               <div className="border-t pt-4">
                 <p className="text-sm font-medium mb-2">Activity Summary</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center p-2 bg-muted rounded">
-                    <FileText className="w-4 h-4 mx-auto mb-1" />
-                    <p className="text-lg font-bold">{userStats.invoices}</p>
-                    <p className="text-xs text-muted-foreground">Invoices</p>
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                   </div>
-                  <div className="text-center p-2 bg-muted rounded">
-                    <FolderKanban className="w-4 h-4 mx-auto mb-1" />
-                    <p className="text-lg font-bold">{userStats.projects}</p>
-                    <p className="text-xs text-muted-foreground">Projects</p>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-2 bg-muted rounded">
+                      <FileText className="w-4 h-4 mx-auto mb-1" />
+                      <p className="text-lg font-bold">{userStats.invoices}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {viewingUser.role === 'staff' || viewingUser.role === 'admin' 
+                          ? 'Project Invoices' 
+                          : 'Invoices'}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded">
+                      <FolderKanban className="w-4 h-4 mx-auto mb-1" />
+                      <p className="text-lg font-bold">{userStats.projects}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {viewingUser.role === 'staff' || viewingUser.role === 'admin' 
+                          ? 'Assigned Projects' 
+                          : 'Projects'}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded">
+                      <Ticket className="w-4 h-4 mx-auto mb-1" />
+                      <p className="text-lg font-bold">{userStats.tickets}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {viewingUser.role === 'staff' || viewingUser.role === 'admin' 
+                          ? 'Assigned Tickets' 
+                          : 'Tickets'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-center p-2 bg-muted rounded">
-                    <Ticket className="w-4 h-4 mx-auto mb-1" />
-                    <p className="text-lg font-bold">{userStats.tickets}</p>
-                    <p className="text-xs text-muted-foreground">Tickets</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingUser(null)}>
+            <Button variant="outline" onClick={() => {
+              setViewingUser(null);
+              setUserStats({ invoices: 0, projects: 0, tickets: 0 });
+            }}>
               Close
             </Button>
           </DialogFooter>
@@ -538,6 +790,18 @@ export default function AdminUsers() {
                 value={editForm.phone}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Client Code</Label>
+              <Input
+                value={editForm.client_code}
+                onChange={(e) => setEditForm({ ...editForm, client_code: e.target.value })}
+                placeholder="Enter unique client code"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Unique identifier for the client (leave empty to remove)
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Role</Label>

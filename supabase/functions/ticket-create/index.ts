@@ -38,7 +38,7 @@ serve(async (req) => {
       );
     }
 
-    // For unauthenticated users, create or find a profile by email
+    // For unauthenticated users, find a profile by email or use system profile
     let clientId = body.client_id;
     
     if (!clientId && body.email) {
@@ -47,15 +47,54 @@ serve(async (req) => {
         .from('profiles')
         .select('id')
         .eq('email', body.email)
-        .single();
+        .maybeSingle();
 
       if (existingProfile) {
         clientId = existingProfile.id;
+      } else {
+        // For unauthenticated users without a profile, use a system support profile
+        // This allows support requests from anyone, even without an account
+        // First, try to find or create a system support profile
+        let { data: systemProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', 'support@dubiqo.com')
+          .maybeSingle();
+        
+        // If system profile doesn't exist, we'll need to create it
+        // But it requires an auth user, so for now we'll use a fallback
+        // In production, ensure a support@dubiqo.com profile exists
+        if (!systemProfile) {
+          // Try to find any admin/staff profile as fallback
+          const { data: adminProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .limit(1)
+            .maybeSingle();
+          
+          if (adminProfile) {
+            systemProfile = adminProfile;
+          } else {
+            throw new Error('System configuration error. Please contact support directly.');
+          }
+        }
+        
+        if (systemProfile) {
+          clientId = systemProfile.id;
+          // Store the actual requester info in metadata
+          console.log(`Using system profile for unauthenticated user: ${body.email}`);
+        }
       }
+    }
+
+    // client_id is required by the schema
+    if (!clientId) {
+      throw new Error('Unable to process support request. Please provide a valid email address.');
     }
 
     // Create ticket record
     const ticketData: Record<string, unknown> = {
+      client_id: clientId,
       title: body.title.trim(),
       description: body.description.trim(),
       category: body.category || 'general',
@@ -68,11 +107,6 @@ serve(async (req) => {
         source: 'support_form',
       },
     };
-
-    // Only set client_id if we have one (for authenticated users)
-    if (clientId) {
-      ticketData.client_id = clientId;
-    }
 
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')

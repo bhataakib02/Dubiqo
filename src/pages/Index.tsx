@@ -204,53 +204,64 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-30" />
-        <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/20 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
 
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-4xl mx-auto text-center">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-5xl mx-auto text-center">
             <Badge
               variant="outline"
-              className="mb-6 px-4 py-2 text-sm border-primary/30 bg-primary/5"
+              className="mb-6 px-4 py-2 text-sm border-primary/30 bg-primary/5 animate-fade-in hover:bg-primary/10 transition-colors"
             >
-              <Zap className="w-4 h-4 mr-2 text-primary" />
+              <Zap className="w-4 h-4 mr-2 text-primary animate-pulse" />
               We build websites that build your business
             </Badge>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-fade-in">
-              Digital Solutions for <span className="gradient-text">Modern Business</span>
+            <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight mb-6 animate-fade-in leading-tight">
+              Digital Solutions for <br />
+              <span className="gradient-text">
+                Modern Business
+              </span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto animate-fade-in animation-delay-200">
+            <p className="text-xl md:text-2xl lg:text-3xl text-muted-foreground mb-10 max-w-3xl mx-auto animate-fade-in animation-delay-200 leading-relaxed">
               From stunning websites to powerful applications, we create digital experiences that
-              drive growth and delight users.
+              drive growth and delight users. <span className="text-foreground font-semibold">Your success is our mission.</span>
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in animation-delay-300">
-              <Button size="lg" asChild className="glow-primary text-lg px-8 py-6">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-fade-in animation-delay-300">
+              <Button size="lg" asChild className="glow-primary text-lg px-10 py-7 hover:scale-105 transition-transform duration-300">
                 <Link to="/quote">
                   Get Free Quote
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="text-lg px-8 py-6">
+              <Button size="lg" variant="outline" asChild className="text-lg px-10 py-7 hover:scale-105 transition-transform duration-300 border-2">
                 <Link to="/portfolio">View Our Work</Link>
               </Button>
             </div>
 
             {/* Trust indicators */}
             <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-muted-foreground animate-fade-in animation-delay-500">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                <span>Free Consultation</span>
+                <span className="font-medium">Free Consultation</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                <span>No Hidden Fees</span>
+                <span className="font-medium">No Hidden Fees</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                <span>Money-Back Guarantee</span>
+                <span className="font-medium">Money-Back Guarantee</span>
+              </div>
+            </div>
+
+            {/* Scroll indicator */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+              <div className="w-6 h-10 rounded-full border-2 border-primary/30 flex items-start justify-center p-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-pulse" />
               </div>
             </div>
           </div>
@@ -258,15 +269,19 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <Section className="py-16 border-y border-border/50">
+      <Section className="py-20 border-y border-border/50 bg-gradient-to-b from-background via-card/30 to-background">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold gradient-text mb-2">
+              <div 
+                key={index} 
+                className="text-center group hover:scale-105 transition-transform duration-300"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="text-5xl md:text-6xl lg:text-7xl font-bold gradient-text mb-3 group-hover:scale-110 transition-transform duration-300">
                   {stat.value}
                 </div>
-                <div className="text-muted-foreground">{stat.label}</div>
+                <div className="text-muted-foreground font-medium text-sm md:text-base">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -285,15 +300,19 @@ const Index = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service, index) => (
               <Link key={index} to={service.href}>
-                <Card className="h-full bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 group card-hover">
-                  <CardContent className="p-6">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <service.icon className="w-7 h-7 text-primary" />
+                <Card className="h-full bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 group card-hover hover:shadow-xl hover:shadow-primary/10">
+                  <CardContent className="p-8">
+                    <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                      <service.icon className="w-8 h-8 text-primary" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
+                    <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
                       {service.title}
                     </h3>
-                    <p className="text-muted-foreground">{service.description}</p>
+                    <p className="text-muted-foreground leading-relaxed mb-4">{service.description}</p>
+                    <div className="flex items-center text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="text-sm font-medium">Learn more</span>
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </div>
                   </CardContent>
                 </Card>
               </Link>
@@ -360,16 +379,18 @@ const Index = () => {
             </div>
 
             <div className="relative">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 p-8 border border-border/50">
-                <div className="h-full rounded-xl bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 rounded-2xl blur-3xl animate-pulse" />
+              <div className="relative aspect-square rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 p-8 border border-border/50 hover:border-primary/50 transition-all duration-300">
+                <div className="h-full rounded-xl bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center hover:scale-105 transition-transform duration-300">
                   <div className="text-center p-8">
-                    <div className="text-6xl font-bold gradient-text mb-4">4.9</div>
-                    <div className="flex justify-center gap-1 mb-2">
+                    <div className="text-7xl font-bold gradient-text mb-4">4.9</div>
+                    <div className="flex justify-center gap-1 mb-3">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-primary text-primary" />
+                        <Star key={i} className="w-6 h-6 fill-primary text-primary" />
                       ))}
                     </div>
-                    <p className="text-muted-foreground">Average Client Rating</p>
+                    <p className="text-muted-foreground font-medium">Average Client Rating</p>
+                    <p className="text-sm text-muted-foreground mt-2">Based on 50+ reviews</p>
                   </div>
                 </div>
               </div>
@@ -389,16 +410,22 @@ const Index = () => {
 
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-card/50 backdrop-blur border-border/50">
-                <CardContent className="p-6">
-                  <div className="flex gap-1 mb-4">
+              <Card 
+                key={index} 
+                className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 group hover:shadow-xl hover:shadow-primary/10"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <CardContent className="p-8">
+                  <div className="flex gap-1 mb-6">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                      <Star key={i} className="w-5 h-5 fill-primary text-primary" />
                     ))}
                   </div>
-                  <blockquote className="text-lg mb-4">"{testimonial.quote}"</blockquote>
-                  <div>
-                    <div className="font-semibold">{testimonial.author}</div>
+                  <blockquote className="text-lg mb-6 leading-relaxed italic">
+                    "{testimonial.quote}"
+                  </blockquote>
+                  <div className="pt-4 border-t border-border/50">
+                    <div className="font-semibold text-foreground mb-1">{testimonial.author}</div>
                     <div className="text-sm text-muted-foreground">{testimonial.role}</div>
                   </div>
                 </CardContent>
@@ -411,23 +438,32 @@ const Index = () => {
       {/* CTA Section */}
       <Section variant="muted">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
-              Ready to Build Something <span className="gradient-text">Amazing?</span>
-            </h2>
-            <p className="text-xl text-muted-foreground mb-10">
-              Let's discuss your project and see how we can help you achieve your goals.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" asChild className="glow-primary text-lg px-8 py-6">
-                <Link to="/quote">
-                  Start Your Project
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="text-lg px-8 py-6">
-                <Link to="/booking">Schedule a Call</Link>
-              </Button>
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur-3xl" />
+              <div className="relative glass rounded-2xl p-12 md:p-16 border border-border/50">
+                <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-8">
+                  <Zap className="w-10 h-10 text-primary" />
+                </div>
+                <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-6">
+                  Ready to Build Something <span className="gradient-text">Amazing?</span>
+                </h2>
+                <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+                  Let's discuss your project and see how we can help you achieve your goals. Every
+                  great journey starts with a single step.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Button size="lg" asChild className="glow-primary text-lg px-10 py-7 hover:scale-105 transition-transform duration-300">
+                    <Link to="/quote">
+                      Start Your Project
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" asChild className="text-lg px-10 py-7 hover:scale-105 transition-transform duration-300 border-2">
+                    <Link to="/booking">Schedule a Call</Link>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

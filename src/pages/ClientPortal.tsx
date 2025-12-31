@@ -73,6 +73,7 @@ export default function ClientPortal() {
 
   // Project details dialog
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
+  const [assignedStaff, setAssignedStaff] = useState<Array<{ id: string; profiles?: { full_name: string | null; email: string } }>>([]);
 
   // Ticket details dialog
   const [viewingTicket, setViewingTicket] = useState<TicketWithMessages | null>(null);
@@ -608,7 +609,24 @@ export default function ClientPortal() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setViewingProject(project)}
+                          onClick={async () => {
+                            setViewingProject(project);
+                            // Load assigned staff
+                            if (supabase) {
+                              try {
+                                const { data } = await (supabase as any)
+                                  .from('project_staff_assignments')
+                                  .select(`
+                                    id,
+                                    profiles:staff_id(full_name, email)
+                                  `)
+                                  .eq('project_id', project.id);
+                                setAssignedStaff(data || []);
+                              } catch (error) {
+                                console.error('Error loading assigned staff:', error);
+                              }
+                            }
+                          }}
                         >
                           View Details
                           <ArrowRight className="w-4 h-4 ml-2" />
@@ -1074,7 +1092,7 @@ export default function ClientPortal() {
           </Dialog>
 
           {/* Project Details Dialog */}
-          <Dialog open={!!viewingProject} onOpenChange={() => setViewingProject(null)}>
+          <Dialog open={!!viewingProject} onOpenChange={() => { setViewingProject(null); setAssignedStaff([]); }}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Project Details</DialogTitle>
@@ -1132,6 +1150,27 @@ export default function ClientPortal() {
                     <p className="font-medium">
                       {new Date(viewingProject.created_at).toLocaleDateString()}
                     </p>
+                  </div>
+                  
+                  {/* Assigned Staff Section */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="w-4 h-4" />
+                      <p className="text-sm font-semibold">Assigned Staff</p>
+                    </div>
+                    {assignedStaff.length > 0 ? (
+                      <div className="space-y-2">
+                        {assignedStaff.map((assignment) => (
+                          <div key={assignment.id} className="flex items-center p-2 bg-muted rounded-md">
+                            <span className="text-sm">
+                              {assignment.profiles?.full_name || assignment.profiles?.email || 'Staff Member'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No staff assigned yet</p>
+                    )}
                   </div>
                 </div>
               )}

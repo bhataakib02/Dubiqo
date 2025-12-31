@@ -34,6 +34,9 @@
 --
 -- ============================================================================
 
+-- CRITICAL: Ensure RLS is disabled on user_roles (prevents recursion)
+ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;
+
 -- Assign admin role
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'admin' 

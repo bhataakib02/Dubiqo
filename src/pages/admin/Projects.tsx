@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Plus, RefreshCw, FolderKanban, Eye, Edit, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Plus, RefreshCw, FolderKanban, Eye, Edit, Trash2, Search, MessageSquare, Users, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -18,7 +19,25 @@ type ProjectWithClient = Tables<"projects"> & {
   profiles?: { full_name: string | null; email: string; client_code: string | null } | null;
 };
 
-type Profile = { id: string; email: string; full_name: string | null; client_code: string | null };
+type Profile = { id: string; email: string; full_name: string | null; client_code: string | null; role?: string };
+
+type ProjectComment = {
+  id: string;
+  project_id: string;
+  user_id: string;
+  comment: string;
+  is_internal: boolean;
+  created_at: string;
+  updated_at: string;
+  profiles?: { full_name: string | null; email: string };
+};
+
+type ProjectStaffAssignment = {
+  id: string;
+  project_id: string;
+  staff_id: string;
+  profiles?: { full_name: string | null; email: string };
+};
 
 const formatINR = (paise: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(paise / 100);
@@ -27,8 +46,10 @@ const formatINR = (paise: number) => {
 export default function AdminProjects() {
   const [projects, setProjects] = useState<ProjectWithClient[]>([]);
   const [clients, setClients] = useState<Profile[]>([]);
+  const [staff, setStaff] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [staffOnlyView, setStaffOnlyView] = useState(false);
   const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,6 +57,11 @@ export default function AdminProjects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectWithClient | null>(null);
   const [viewingProject, setViewingProject] = useState<ProjectWithClient | null>(null);
+  const [assignedStaff, setAssignedStaff] = useState<Map<string, ProjectStaffAssignment[]>>(new Map());
+  const [projectComments, setProjectComments] = useState<Map<string, ProjectComment[]>>(new Map());
+  const [newComment, setNewComment] = useState("");
+  const [selectedStaffIds, setSelectedStaffIds] = useState<Set<string>>(new Set());
+  const [loadingStaff, setLoadingStaff] = useState(false);
 
   const location = useLocation();
   const cameFromStaff = (location.state as any)?.from === 'staff';
@@ -74,9 +100,10 @@ export default function AdminProjects() {
         .select('role')
         .eq('user_id', user.id);
 
-      const isAdmin = roles?.some((r) => r.role === 'admin');
+      const userIsAdmin = roles?.some((r) => r.role === 'admin');
       const isStaff = roles?.some((r) => r.role === 'staff');
-      const staffOnly = !!isStaff && !isAdmin;
+      const staffOnly = !!isStaff && !userIsAdmin;
+      setIsAdmin(!!userIsAdmin);
       setStaffOnlyView(staffOnly);
 
       if (staffOnly) {
@@ -108,12 +135,248 @@ export default function AdminProjects() {
   useEffect(() => {
     initializeProjects();
     loadClients();
+    loadStaff();
   }, [initializeProjects]);
 
   const loadClients = async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('id, email, full_name, client_code').order('email');
-    setClients(data || []);
+    try {
+      // Get all client roles
+      const { data: clientRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'client');
+      
+      if (!clientRoles || clientRoles.length === 0) {
+        setClients([]);
+        return;
+      }
+      
+      const clientIds = clientRoles.map(r => r.user_id);
+      
+      // Load only client profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, client_code')
+        .in('id', clientIds)
+        .order('email');
+      
+      if (error) {
+        console.error('Error loading clients:', error);
+        setClients([]);
+        return;
+      }
+      
+      setClients(data || []);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      setClients([]);
+    }
+  };
+
+  const loadStaff = async () => {
+    if (!supabase) {
+      console.error('Supabase client not available');
+      return;
+    }
+    setLoadingStaff(true);
+    try {
+      // First, get all staff and admin roles
+      const { data: allRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('role', ['staff', 'admin']);
+      
+      if (rolesError) {
+        console.error('Error loading roles:', rolesError);
+        setStaff([]);
+        return;
+      }
+      
+      if (!allRoles || allRoles.length === 0) {
+        console.warn('No staff or admin roles found');
+        setStaff([]);
+        return;
+      }
+      
+      console.log('Found roles:', allRoles.length);
+      
+      // Create a map of user_id to role
+      const roleMap = new Map<string, string>();
+      (allRoles || []).forEach(r => {
+        roleMap.set(r.user_id, r.role);
+      });
+      
+      // Get user IDs from roles
+      const userIds = Array.from(roleMap.keys());
+      
+      if (userIds.length === 0) {
+        console.warn('No user IDs found in roles');
+        setStaff([]);
+        return;
+      }
+      
+      // Load profiles for those user IDs
+      const { data: staffProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, client_code, metadata')
+        .in('id', userIds)
+        .order('email');
+      
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        setStaff([]);
+        return;
+      }
+      
+      console.log('Found profiles:', staffProfiles?.length || 0);
+      
+      // Map profiles to staff list with descriptive roles
+      const staffList = (staffProfiles || [])
+        .map(p => {
+          const baseRole = roleMap.get(p.id) || 'staff';
+          // Get descriptive role from metadata (e.g., "backend developer", "ui/ux", "frontend developer")
+          const metadata = p.metadata as any;
+          const descriptiveRole = metadata?.role || metadata?.job_title || metadata?.position || baseRole;
+          
+          return {
+            ...p,
+            role: descriptiveRole,
+            baseRole: baseRole // Keep base role for filtering
+          };
+        });
+      
+      console.log('Staff list created:', staffList.length);
+      setStaff(staffList);
+      if (staffList.length === 0) {
+        console.warn('No staff members found. Check:', {
+          rolesFound: allRoles?.length || 0,
+          profilesFound: staffProfiles?.length || 0,
+          userIds: userIds.length
+        });
+      }
+    } catch (error) {
+      console.error('Error loading staff:', error);
+      setStaff([]);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  const loadAssignedStaff = async (projectId: string) => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await (supabase as any)
+        .from('project_staff_assignments')
+        .select(`
+          id,
+          project_id,
+          staff_id,
+          profiles:staff_id(full_name, email)
+        `)
+        .eq('project_id', projectId);
+      
+      if (error) throw error;
+      setAssignedStaff(prev => new Map(prev).set(projectId, data || []));
+      return data || [];
+    } catch (error) {
+      console.error('Error loading assigned staff:', error);
+      return [];
+    }
+  };
+
+  const loadProjectComments = async (projectId: string) => {
+    if (!supabase || !currentUserId) return;
+    try {
+      // Load comments based on user role
+      const { data, error } = await (supabase as any)
+        .from('project_comments')
+        .select(`
+          *,
+          profiles:user_id(full_name, email)
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setProjectComments(prev => new Map(prev).set(projectId, data || []));
+      return data || [];
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      return [];
+    }
+  };
+
+  const handleAssignStaff = async (projectId: string, staffIds: string[]) => {
+    if (!supabase || !isAdmin) return;
+    
+    try {
+      // Get current assignments
+      const currentAssignments = await loadAssignedStaff(projectId);
+      const currentStaffIds = new Set(currentAssignments.map(a => a.staff_id));
+      
+      // Find staff to add and remove
+      const toAdd = staffIds.filter(id => !currentStaffIds.has(id));
+      const toRemove = currentAssignments.filter(a => !staffIds.includes(a.staff_id)).map(a => a.id);
+      
+      // Remove assignments
+      if (toRemove.length > 0) {
+        const { error: deleteError } = await (supabase as any)
+          .from('project_staff_assignments')
+          .delete()
+          .in('id', toRemove);
+        if (deleteError) throw deleteError;
+      }
+      
+      // Add new assignments
+      if (toAdd.length > 0) {
+        const assignments = toAdd.map(staffId => ({
+          project_id: projectId,
+          staff_id: staffId,
+          assigned_by: currentUserId
+        }));
+        
+        const { error: insertError } = await (supabase as any)
+          .from('project_staff_assignments')
+          .insert(assignments);
+        if (insertError) throw insertError;
+      }
+      
+      toast.success('Staff assignments updated');
+      await loadAssignedStaff(projectId);
+    } catch (error) {
+      console.error('Error assigning staff:', error);
+      toast.error('Failed to update staff assignments');
+    }
+  };
+
+  const handleAddComment = async (projectId: string, comment: string, isInternal: boolean) => {
+    if (!supabase || !currentUserId || !comment.trim()) return;
+    
+    // Only staff can add internal comments
+    if (isInternal && !isAdmin && !staffOnlyView) {
+      toast.error('Only staff can add internal comments');
+      return;
+    }
+    
+    try {
+      const { error } = await (supabase as any)
+        .from('project_comments')
+        .insert({
+          project_id: projectId,
+          user_id: currentUserId,
+          comment: comment.trim(),
+          is_internal: isInternal
+        });
+      
+      if (error) throw error;
+      toast.success(isInternal ? 'Internal comment added' : 'Comment added');
+      setNewComment("");
+      await loadProjectComments(projectId);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error('Failed to add comment');
+    }
   };
 
   const loadProjects = async () => {
@@ -177,6 +440,13 @@ export default function AdminProjects() {
     loadClients();
   }, [initializeProjects]);
 
+  // Load staff when admin status is determined
+  useEffect(() => {
+    if (isAdmin) {
+      loadStaff();
+    }
+  }, [isAdmin]);
+
   const handleCreate = async () => {
     if (!supabase) return;
     if (!formData.title || !formData.client_id || !formData.project_type) {
@@ -222,6 +492,12 @@ export default function AdminProjects() {
         .eq('id', editingProject.id);
 
       if (error) throw error;
+      
+      // Update staff assignments if admin
+      if (isAdmin) {
+        await handleAssignStaff(editingProject.id, Array.from(selectedStaffIds));
+      }
+      
       toast.success('Project updated successfully');
       resetForm();
       loadProjects();
@@ -280,7 +556,7 @@ export default function AdminProjects() {
     }
   };
 
-  const handleEdit = (project: ProjectWithClient) => {
+  const handleEdit = async (project: ProjectWithClient) => {
     setEditingProject(project);
     setFormData({
       title: project.title,
@@ -290,12 +566,28 @@ export default function AdminProjects() {
       status: project.status,
       budget: project.budget ? (Number(project.budget) / 100).toString() : ""
     });
+    // Ensure staff is loaded (especially important for admin users)
+    if (isAdmin) {
+      console.log('Loading staff for edit dialog...');
+      await loadStaff();
+    }
+    // Load assigned staff for this project
+    const assignments = await loadAssignedStaff(project.id);
+    setSelectedStaffIds(new Set(assignments.map(a => a.staff_id)));
   };
 
   const resetForm = () => {
     setFormData({ title: "", description: "", client_id: "", project_type: "website", status: "discovery", budget: "" });
     setIsCreateOpen(false);
     setEditingProject(null);
+    setSelectedStaffIds(new Set());
+    setNewComment("");
+  };
+
+  const handleViewProject = async (project: ProjectWithClient) => {
+    setViewingProject(project);
+    await loadAssignedStaff(project.id);
+    await loadProjectComments(project.id);
   };
 
   const filteredProjects = projects.filter(project => {
@@ -415,7 +707,7 @@ export default function AdminProjects() {
                         <TableCell>{new Date(project.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => setViewingProject(project)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleViewProject(project)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(project)}>
@@ -438,7 +730,7 @@ export default function AdminProjects() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateOpen || !!editingProject} onOpenChange={() => resetForm()}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProject ? 'Edit Project' : 'Create Project'}</DialogTitle>
           </DialogHeader>
@@ -486,6 +778,82 @@ export default function AdminProjects() {
               <Label>Budget (₹)</Label>
               <Input type="number" value={formData.budget} onChange={(e) => setFormData({ ...formData, budget: e.target.value })} placeholder="0.00" />
             </div>
+            {isAdmin && editingProject && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Assign Staff</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      console.log('Reloading staff manually...');
+                      loadStaff();
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Reload
+                  </Button>
+                </div>
+                <div className="border rounded-md p-3 space-y-2 max-h-64 overflow-y-auto">
+                  {loadingStaff ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                      <span className="ml-2 text-sm text-muted-foreground">Loading staff...</span>
+                    </div>
+                  ) : staff.length === 0 ? (
+                    <div className="py-4">
+                      <p className="text-sm text-muted-foreground text-center">No staff available</p>
+                      <p className="text-xs text-muted-foreground text-center mt-1">
+                        Make sure staff users have 'staff' or 'admin' role in user_roles table
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Debug: Current state:', { isAdmin, staffCount: staff.length });
+                          loadStaff();
+                        }}
+                        className="mt-2 w-full text-xs"
+                      >
+                        Try Loading Again
+                      </Button>
+                    </div>
+                  ) : (
+                    staff.map((s) => (
+                      <div key={s.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`staff-${s.id}`}
+                          checked={selectedStaffIds.has(s.id)}
+                          onCheckedChange={(checked) => {
+                            const newSet = new Set(selectedStaffIds);
+                            if (checked) {
+                              newSet.add(s.id);
+                            } else {
+                              newSet.delete(s.id);
+                            }
+                            setSelectedStaffIds(newSet);
+                          }}
+                        />
+                        <label
+                          htmlFor={`staff-${s.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{s.full_name || s.email}</span>
+                            {s.role && s.role !== 'staff' && s.role !== 'admin' && (
+                              <Badge variant="outline" className="text-xs">
+                                {s.role}
+                              </Badge>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetForm}>Cancel</Button>
@@ -495,13 +863,13 @@ export default function AdminProjects() {
       </Dialog>
 
       {/* View Dialog */}
-      <Dialog open={!!viewingProject} onOpenChange={() => setViewingProject(null)}>
-        <DialogContent>
+      <Dialog open={!!viewingProject} onOpenChange={() => { setViewingProject(null); setNewComment(""); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Project Details</DialogTitle>
           </DialogHeader>
           {viewingProject && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <p className="text-sm text-muted-foreground">Title</p>
                 <p className="font-semibold text-lg">{viewingProject.title}</p>
@@ -536,10 +904,81 @@ export default function AdminProjects() {
                 <p className="text-sm text-muted-foreground">Created</p>
                 <p>{new Date(viewingProject.created_at).toLocaleDateString()}</p>
               </div>
+              
+              {/* Assigned Staff Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4" />
+                  <Label className="text-base font-semibold">Assigned Staff</Label>
+                </div>
+                {(() => {
+                  const staff = assignedStaff.get(viewingProject.id) || [];
+                  return staff.length > 0 ? (
+                    <div className="space-y-2">
+                      {staff.map((assignment) => (
+                        <div key={assignment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                          <span className="text-sm">
+                            {assignment.profiles?.full_name || assignment.profiles?.email || 'Unknown'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No staff assigned</p>
+                  );
+                })()}
+              </div>
+              
+              {/* Comments Section */}
+              {(isAdmin || staffOnlyView) && (
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-4 h-4" />
+                    <Label className="text-base font-semibold">Internal Comments</Label>
+                  </div>
+                  <div className="space-y-3 mb-4">
+                    {(() => {
+                      const comments = (projectComments.get(viewingProject.id) || []).filter(c => c.is_internal);
+                      return comments.length > 0 ? (
+                        comments.map((comment) => (
+                          <div key={comment.id} className="p-3 bg-muted rounded-md">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">
+                                {comment.profiles?.full_name || comment.profiles?.email || 'Unknown'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(comment.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm">{comment.comment}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No internal comments yet</p>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-2">
+                    <Textarea
+                      placeholder="Add an internal comment (only visible to staff)..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      rows={3}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddComment(viewingProject.id, newComment, true)}
+                      disabled={!newComment.trim()}
+                    >
+                      Add Internal Comment
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewingProject(null)}>Close</Button>
+            <Button variant="outline" onClick={() => { setViewingProject(null); setNewComment(""); }}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
