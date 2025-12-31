@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { isAdminEmail } from '@/lib/roleUtils';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['app_role'];
@@ -14,11 +15,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     if (!supabase) {
       setIsLoading(false);
       setIsAuthorized(false);
@@ -49,16 +46,32 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         .select('role')
         .eq('user_id', session.user.id);
 
+      let userRole: UserRole = 'client'; // Default to client
+
       if (error) {
         console.error('Error fetching user roles:', error);
-        setIsAuthorized(false);
-        setIsLoading(false);
-        return;
+        // If RLS error or no role found, check admin email as fallback
+        const userEmail = session.user.email;
+        if (userEmail && isAdminEmail(userEmail)) {
+          userRole = 'admin';
+        }
+      } else if (roleData && roleData.length > 0) {
+        // Get the highest priority role (admin > staff > client)
+        if (roleData.some((r) => r.role === 'admin')) {
+          userRole = 'admin';
+        } else if (roleData.some((r) => r.role === 'staff')) {
+          userRole = 'staff';
+        }
+      } else {
+        // No role in database, check admin email as fallback
+        const userEmail = session.user.email;
+        if (userEmail && isAdminEmail(userEmail)) {
+          userRole = 'admin';
+        }
       }
 
       // Check if user has any of the required roles
-      const hasRequiredRole =
-        roleData && roleData.length > 0 && roleData.some((r) => requiredRole.includes(r.role));
+      const hasRequiredRole = requiredRole.includes(userRole);
 
       if (hasRequiredRole) {
         setIsAuthorized(true);
@@ -71,7 +84,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [requiredRole]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   if (isLoading) {
     return (

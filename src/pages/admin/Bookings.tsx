@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,11 +44,43 @@ export default function AdminBookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => {
-    initializeBookings();
-  }, []);
+  const loadBookings = useCallback(async () => {
+    if (!supabase) return;
+    setIsLoading(true);
 
-  const initializeBookings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('time_slot', { ascending: true });
+
+      if (error) throw error;
+
+      let result = data || [];
+      if (staffOnlyView && myClientIds.size > 0) {
+        // Only bookings whose client is both in myClientIds and the client has the role 'client'
+        const clientRoleMap = new Map<string, string>();
+        try {
+          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+          (roles || []).forEach((r: any) => {
+            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
+          });
+        } catch {
+          // Ignore errors when fetching user roles
+        }
+        result = result.filter((b: any) => b.client_id && myClientIds.has(b.client_id) && clientRoleMap.has(b.client_id));
+      }
+      setBookings(result);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+      toast.error('Failed to load bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [staffOnlyView, myClientIds]);
+
+  const initializeBookings = useCallback(async () => {
     if (!supabase) {
       await loadBookings();
       return;
@@ -98,41 +130,11 @@ export default function AdminBookings() {
       console.error('Error initializing bookings view:', error);
       await loadBookings();
     }
-  };
+  }, [loadBookings]);
 
-  const loadBookings = async () => {
-    if (!supabase) return;
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .order('date', { ascending: true })
-        .order('time_slot', { ascending: true });
-
-      if (error) throw error;
-
-      let result = data || [];
-      if (staffOnlyView && myClientIds.size > 0) {
-        // Only bookings whose client is both in myClientIds and the client has the role 'client'
-        const clientRoleMap = new Map<string, string>();
-        try {
-          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
-          (roles || []).forEach((r: any) => {
-            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
-          });
-        } catch {}
-        result = result.filter((b: any) => b.client_id && myClientIds.has(b.client_id) && clientRoleMap.has(b.client_id));
-      }
-      setBookings(result);
-    } catch (error) {
-      console.error('Error loading bookings:', error);
-      toast.error('Failed to load bookings');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    initializeBookings();
+  }, [initializeBookings]);
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     if (!supabase) return;

@@ -56,14 +56,21 @@ export default function Blog() {
     }
     
     try {
+      // Only load posts where published is explicitly true (not null or false)
       const { data, error } = await supabase
         .from('blog_posts')
         .select('*, author:profiles!blog_posts_author_id_fkey(full_name, email)')
-        .eq('published', true)
+        .eq('published', true)  // Only published posts
+        .not('published', 'is', null)  // Exclude null values
         .order('published_at', { ascending: false, nullsLast: true })
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading blog posts:', error);
+        throw error;
+      }
+      
+      console.log('Loaded blog posts:', data?.length || 0, 'published posts');
       setPosts((data || []) as BlogPost[]);
     } catch (error) {
       console.error('Error loading blog posts:', error);

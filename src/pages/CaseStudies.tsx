@@ -80,33 +80,29 @@ export default function CaseStudies() {
     }
     setIsLoading(true);
     try {
-      // First try to load all case studies
-      let query = supabase
+      // Load only published case studies
+      const query = supabase
         .from('case_studies')
         .select('*')
+        .eq('published', true)  // Only published case studies
+        .not('published', 'is', null)  // Exclude null values
         .order('created_at', { ascending: false });
       
       const { data, error } = await query;
       
       if (error) {
-        // If RLS policy error, try with different approach
         console.error('Error loading case studies:', error);
         throw error;
       }
       
       if (!data || data.length === 0) {
+        console.log('No published case studies found');
         setCaseStudies([]);
         return;
       }
       
-      // Filter by published if field exists, otherwise show all
-      let filteredData = data;
-      if (data.length > 0 && 'published' in data[0]) {
-        filteredData = data.filter((item: any) => item.published === true || item.published === null);
-      }
-      
       // Map database fields to component format
-      const mapped = filteredData.map((item: any) => ({
+      const mapped = data.map((item: any) => ({
         id: item.id,
         slug: item.slug,
         title: item.title,

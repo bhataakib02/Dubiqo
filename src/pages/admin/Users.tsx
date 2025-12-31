@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,11 +80,7 @@ export default function AdminUsers() {
   const backHref = cameFromStaff ? '/staff' : '/admin/dashboard';
   const backLabel = cameFromStaff ? 'Back to Staff Workspace' : 'Back to Dashboard';
 
-  useEffect(() => {
-    initializeUsers();
-  }, []);
-
-  const initializeUsers = async () => {
+  const initializeUsers = useCallback(async () => {
     if (!supabase) {
       await loadUsers();
       return;
@@ -134,7 +130,12 @@ export default function AdminUsers() {
       console.error('Error initializing users view:', error);
       await loadUsers();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeUsers();
+  }, [initializeUsers]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -297,17 +298,22 @@ export default function AdminUsers() {
 
     try {
       // Delete user role first
-      await supabase.from('user_roles').delete().eq('user_id', user.id);
+      const { error: roleError } = await supabase.from('user_roles').delete().eq('user_id', user.id);
+      if (roleError) {
+        console.warn('Error deleting user role (may not exist):', roleError);
+        // Continue even if role delete fails
+      }
 
       // Delete profile (this won't delete from auth.users, but removes from app)
       const { error } = await supabase.from('profiles').delete().eq('id', user.id);
 
       if (error) throw error;
       toast.success('User deleted successfully');
-      loadUsers();
+      await loadUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete user: ${errorMessage}`);
     }
   };
 
@@ -418,7 +424,11 @@ export default function AdminUsers() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(user)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDelete(user);
+                              }}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="w-4 h-4" />

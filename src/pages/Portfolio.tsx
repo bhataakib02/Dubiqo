@@ -12,93 +12,33 @@ import { toast } from 'sonner';
 
 const categories = ['All', 'Websites', 'Web Apps', 'Dashboards', 'E-Commerce'];
 
-const staticProjects = [
-  {
-    id: '1',
-    title: 'FinTech Dashboard',
-    category: 'Dashboards',
-    description: 'Real-time financial analytics platform with advanced charting and reporting.',
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop',
-    technologies: ['React', 'TypeScript', 'D3.js', 'Node.js'],
-    link: '#',
-  },
-  {
-    id: '2',
-    title: 'E-Commerce Platform',
-    category: 'E-Commerce',
-    description: 'Multi-vendor marketplace with integrated payments and inventory management.',
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=600&fit=crop',
-    technologies: ['Next.js', 'Stripe', 'PostgreSQL', 'Tailwind'],
-    link: '#',
-  },
-  {
-    id: '3',
-    title: 'SaaS Analytics Tool',
-    category: 'Web Apps',
-    description: 'User behavior analytics platform with AI-powered insights.',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop',
-    technologies: ['React', 'Python', 'TensorFlow', 'AWS'],
-    link: '#',
-  },
-  {
-    id: '4',
-    title: 'Healthcare Portal',
-    category: 'Web Apps',
-    description: 'Patient management system with telemedicine capabilities.',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=800&h=600&fit=crop',
-    technologies: ['React', 'Node.js', 'MongoDB', 'WebRTC'],
-    link: '#',
-  },
-  {
-    id: '5',
-    title: 'Corporate Website',
-    category: 'Websites',
-    description: 'Modern corporate website with CMS and lead generation features.',
-    image: 'https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=800&h=600&fit=crop',
-    technologies: ['Next.js', 'Sanity CMS', 'Tailwind'],
-    link: '#',
-  },
-  {
-    id: '6',
-    title: 'Inventory Dashboard',
-    category: 'Dashboards',
-    description: 'Real-time inventory tracking with predictive analytics.',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&h=600&fit=crop',
-    technologies: ['React', 'GraphQL', 'PostgreSQL'],
-    link: '#',
-  },
-  {
-    id: '7',
-    title: 'Fashion E-Shop',
-    category: 'E-Commerce',
-    description: 'Luxury fashion brand online store with AR try-on features.',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
-    technologies: ['Next.js', 'Shopify', 'Three.js'],
-    link: '#',
-  },
-  {
-    id: '8',
-    title: 'Restaurant Website',
-    category: 'Websites',
-    description: 'Restaurant website with online ordering and reservation system.',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop',
-    technologies: ['React', 'Firebase', 'Stripe'],
-    link: '#',
-  },
-];
+type PortfolioProject = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  image: string;
+  technologies: string[];
+  link: string | null;
+};
 
 export default function Portfolio() {
   const [activeCategory, setActiveCategory] = useState('All');
-  const [projects, setProjects] = useState(staticProjects);
-  const [isLoading, setIsLoading] = useState(false);
+  const [projects, setProjects] = useState<PortfolioProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadProjects = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('portfolio_items')
         .select('*')
+        .eq('published', true)  // Only published portfolio items
+        .not('published', 'is', null)  // Exclude null values
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (data && data.length > 0) {
@@ -106,15 +46,15 @@ export default function Portfolio() {
           data.map((p) => ({
             ...p,
             technologies: (p as any).technologies || [],
-          })) as typeof staticProjects
+          })) as PortfolioProject[]
         );
       } else {
-        setProjects(staticProjects);
+        setProjects([]);
       }
     } catch (error) {
       console.error('Error loading portfolio items:', error);
-      toast.error('Failed to load portfolio items. Showing defaults.');
-      setProjects(staticProjects);
+      toast.error('Failed to load portfolio items.');
+      setProjects([]);
     } finally {
       setIsLoading(false);
     }
@@ -169,6 +109,11 @@ export default function Portfolio() {
           {isLoading ? (
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center text-muted-foreground py-20">
+              <p className="text-xl mb-2">No portfolio items found</p>
+              <p className="text-sm">Portfolio items will appear here once they are added.</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

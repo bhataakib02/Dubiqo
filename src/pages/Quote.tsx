@@ -138,15 +138,17 @@ export default function Quote() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/quote-create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
+      if (!supabase) {
+        throw new Error("Supabase client not available");
+      }
+
+      // Try to invoke the Edge Function first, but fallback to direct DB insert
+      let data, error;
+      let useDirectInsert = false;
+      
+      try {
+        const result = await supabase.functions.invoke('quote-create', {
+          body: {
             service_type: selectedService,
             features: selectedFeatures,
             pages: pages[0],
@@ -155,23 +157,115 @@ export default function Quote() {
             email: formData.email,
             details: formData.details,
             client_id: user?.id || null,
-          }),
+          },
+        });
+        
+        // If Edge Function returns an error, fallback to direct insert
+        if (result.error) {
+          console.warn("Edge Function returned error, using direct database insert:", result.error);
+          useDirectInsert = true;
+        } else {
+          data = result.data;
+          error = null;
         }
-      );
+      } catch (invokeError: any) {
+        // If Edge Function invocation fails, use direct database insert
+        console.warn("Edge Function not available, using direct database insert:", invokeError);
+        useDirectInsert = true;
+      }
 
-      const data = await response.json();
+      // Fallback to direct database insert if Edge Function failed
+      if (useDirectInsert) {
+        if (!supabase) {
+          throw new Error("Supabase client not available");
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to submit quote");
+        // Calculate estimate manually
+        const service = services.find((s) => s.id === selectedService);
+        if (!service) {
+          throw new Error("Invalid service selected");
+        }
+
+        let estimatedCost = service.basePrice;
+        selectedFeatures.forEach((featureId) => {
+          const feature = features.find((f) => f.id === featureId);
+          if (feature) estimatedCost += feature.price;
+        });
+
+        if (selectedService === "websites" && pages[0] > 5) {
+          estimatedCost += (pages[0] - 5) * 15000;
+        }
+
+        const timelineOption = timelines.find((t) => t.id === timeline);
+        if (timelineOption) {
+          estimatedCost = Math.round(estimatedCost * timelineOption.multiplier);
+        }
+
+        const validUntil = new Date();
+        validUntil.setDate(validUntil.getDate() + 30);
+
+        // Direct database insert
+        const { data: quoteData, error: dbError } = await supabase
+          .from('quotes')
+          .insert({
+            client_id: user?.id || null,
+            service_type: selectedService,
+            estimated_cost: estimatedCost,
+            valid_until: validUntil.toISOString().split('T')[0],
+            status: 'pending',
+            project_details: {
+              name: formData.name,
+              email: formData.email,
+              features: selectedFeatures,
+              pages: pages[0],
+              timeline,
+              details: formData.details,
+            },
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          throw dbError;
+        }
+
+        data = { success: true, quote: quoteData };
+        error = null;
+      }
+
+      if (error) {
+        console.error("Quote submission error:", error);
+        throw error;
       }
 
       setIsSubmitted(true);
       toast.success("Quote Request Submitted!", {
         description: "We'll review your requirements and get back to you within 24 hours.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting quote:", error);
-      toast.error("Failed to submit quote. Please try again.");
+      
+      // More specific error messages
+      let errorMessage = "Failed to submit quote. Please try again.";
+      let errorDescription = "If the problem persists, please contact us directly.";
+      
+      if (error?.message) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = "Network error";
+          errorDescription = "Please check your internet connection and try again.";
+        } else if (error.message.includes('permission') || error.message.includes('row-level security')) {
+          errorMessage = "Permission denied";
+          errorDescription = "You may not have permission to submit quotes. Please contact support.";
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (error?.error) {
+        errorMessage = error.error;
+      }
+      
+      toast.error(errorMessage, {
+        description: errorDescription,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -484,7 +578,14 @@ export default function Quote() {
                       <Button
                         type="submit"
                         className="w-full glow-primary"
-                        disabled={!selectedService || isSubmitting}
+                        disabled={isSubmitting}
+                        onClick={(e) => {
+                          if (!selectedService) {
+                            e.preventDefault();
+                            toast.error("Please select a service first");
+                            return;
+                          }
+                        }}
                       >
                         {isSubmitting ? (
                           <>

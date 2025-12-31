@@ -27,6 +27,13 @@ type PricingPlan = {
   metadata?: any;
 };
 
+type DiscountBanner = {
+  title: string;
+  description: string;
+  discount_percent: number;
+  active: boolean;
+};
+
 const addOns = [
   { name: "Extra Pages", price: "₹150/page" },
   { name: "E-Commerce Integration", price: "From ₹1,499" },
@@ -73,10 +80,60 @@ const formatPrice = (priceCents: number | null, currency: string | null) => {
 export default function Pricing() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [discountBanner, setDiscountBanner] = useState<DiscountBanner | null>(null);
 
   useEffect(() => {
     loadPlans();
+    loadDiscountBanner();
   }, []);
+
+  const loadDiscountBanner = async () => {
+    if (!supabase) return;
+    try {
+      // First, get the active discount key
+      const { data: activeData, error: activeError } = await supabase
+        .from('feature_flags' as any)
+        .select('key, description, enabled')
+        .eq('key', 'pricing_discount_active')
+        .eq('enabled', true)
+        .maybeSingle();
+      
+      if (activeError || !activeData || !activeData.description) {
+        return;
+      }
+      
+      const activeKey = activeData.description;
+      
+      // Then, get the actual discount banner
+      const { data, error } = await supabase
+        .from('feature_flags' as any)
+        .select('key, description, enabled')
+        .eq('key', activeKey)
+        .eq('enabled', true)
+        .maybeSingle();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return;
+        }
+        console.error('Error loading discount banner:', error);
+        return;
+      }
+      
+      if (data && data.description && data.enabled) {
+        try {
+          const banner = JSON.parse(data.description) as DiscountBanner;
+          if (banner.active) {
+            setDiscountBanner(banner);
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse discount banner data:', parseError);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading discount banner:', err);
+    }
+  };
 
   const loadPlans = async () => {
     if (!supabase) {
@@ -85,14 +142,31 @@ export default function Pricing() {
     }
     
     try {
+      // Load all active plans, then filter by published status
       const { data, error } = await supabase
-        .from('pricing_plans')
+        .from('pricing_plans' as any)
         .select('*')
         .eq('active', true)
-        .order('price_cents', { ascending: true, nullsLast: true });
+        .order('price_cents', { ascending: true });
       
-      if (error) throw error;
-      setPlans((data || []) as PricingPlan[]);
+      if (error) {
+        console.error('Error loading pricing plans:', error);
+        throw error;
+      }
+      
+      // Filter to only show published plans
+      // If published field doesn't exist (backward compatibility), show all active plans
+      // Otherwise, only show plans where published is explicitly true
+      const publishedPlans = (data || []).filter((plan: any) => {
+        // If published field doesn't exist in the plan object, show it (backward compatibility)
+        if (!('published' in plan)) {
+          return true;
+        }
+        // Otherwise, only show if published is explicitly true
+        return plan.published === true;
+      }) as unknown as PricingPlan[];
+      
+      setPlans(publishedPlans);
     } catch (error) {
       console.error('Error loading pricing plans:', error);
       // Fallback to empty array if database fails
@@ -129,6 +203,47 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      {/* Discount Banner - Price Tag Style */}
+      {discountBanner && discountBanner.active && (
+        <div className="fixed top-24 right-6 z-50 animate-bounce">
+          <Link to="/quote" className="block cursor-pointer">
+            <div className="relative w-56 h-40 shadow-lg transform rotate-[-2deg] hover:rotate-0 transition-all duration-300 hover:scale-105 glow-primary">
+              {/* Price Tag Shape with V-notch - Using website primary gradient */}
+              <div className="relative w-full h-full gradient-primary" style={{
+                clipPath: 'polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)'
+              }}>
+                {/* Dashed border overlay */}
+                <div className="absolute inset-0 border-2 border-dashed border-white/80" style={{
+                  clipPath: 'polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)',
+                  pointerEvents: 'none'
+                }}></div>
+                
+                {/* Silver Eyelet */}
+                <div className="absolute top-2 right-2 w-6 h-6 bg-gradient-to-br from-gray-200 to-gray-400 rounded-full border-2 border-gray-500 shadow-inner flex items-center justify-center z-10">
+                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                </div>
+                
+                {/* String loop */}
+                <div className="absolute top-0 right-3 w-1 h-5 bg-gray-700 rounded-full z-10"></div>
+                
+                {/* Content */}
+                <div className="relative h-full flex flex-col items-center justify-center px-6 py-4 text-center">
+                  <div className="text-primary-foreground font-bold text-lg uppercase tracking-wider mb-1 drop-shadow-lg">
+                    SPECIAL
+                  </div>
+                  <div className="text-primary-foreground font-bold text-2xl uppercase tracking-wider mb-2 drop-shadow-lg">
+                    {discountBanner.discount_percent}% OFF
+                  </div>
+                  <div className="text-primary-foreground font-semibold text-sm uppercase tracking-wide drop-shadow-lg">
+                    {discountBanner.title}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Pricing Cards */}
       <Section>

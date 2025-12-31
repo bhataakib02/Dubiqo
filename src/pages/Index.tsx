@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Section, SectionHeader } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowRight,
   Globe,
@@ -95,9 +97,110 @@ const testimonials = [
   },
 ];
 
+type DiscountBanner = {
+  title: string;
+  description: string;
+  discount_percent: number;
+  active: boolean;
+};
+
 const Index = () => {
+  const [discountBanner, setDiscountBanner] = useState<DiscountBanner | null>(null);
+
+  useEffect(() => {
+    loadDiscountBanner();
+  }, []);
+
+  const loadDiscountBanner = async () => {
+    if (!supabase) return;
+    try {
+      // First, get the active discount key
+      const { data: activeData, error: activeError } = await supabase
+        .from('feature_flags' as any)
+        .select('key, description, enabled')
+        .eq('key', 'pricing_discount_active')
+        .eq('enabled', true)
+        .maybeSingle();
+      
+      if (activeError || !activeData || !(activeData as any).description) {
+        return;
+      }
+      
+      const activeKey = (activeData as any).description;
+      
+      // Then, get the actual discount banner
+      const { data, error } = await supabase
+        .from('feature_flags' as any)
+        .select('key, description, enabled')
+        .eq('key', activeKey)
+        .eq('enabled', true)
+        .maybeSingle();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return;
+        }
+        console.error('Error loading discount banner:', error);
+        return;
+      }
+      
+      if (data && (data as any).description && (data as any).enabled) {
+        try {
+          const banner = JSON.parse((data as any).description) as DiscountBanner;
+          if (banner.active) {
+            setDiscountBanner(banner);
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse discount banner data:', parseError);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading discount banner:', err);
+    }
+  };
+
   return (
     <Layout>
+      {/* Discount Banner - Price Tag Style */}
+      {discountBanner && discountBanner.active && (
+        <div className="fixed top-24 right-6 z-50 animate-bounce">
+          <Link to="/quote" className="block cursor-pointer">
+            <div className="relative w-56 h-40 shadow-lg transform rotate-[-2deg] hover:rotate-0 transition-all duration-300 hover:scale-105 glow-primary">
+              {/* Price Tag Shape with V-notch - Using website primary gradient */}
+              <div className="relative w-full h-full gradient-primary" style={{
+                clipPath: 'polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)'
+              }}>
+                {/* Dashed border overlay */}
+                <div className="absolute inset-0 border-2 border-dashed border-white/80" style={{
+                  clipPath: 'polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)',
+                  pointerEvents: 'none'
+                }}></div>
+                
+                {/* Silver Eyelet */}
+                <div className="absolute top-2 right-2 w-6 h-6 bg-gradient-to-br from-gray-200 to-gray-400 rounded-full border-2 border-gray-500 shadow-inner flex items-center justify-center z-10">
+                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                </div>
+                
+                {/* String loop */}
+                <div className="absolute top-0 right-3 w-1 h-5 bg-gray-700 rounded-full z-10"></div>
+                
+                {/* Content */}
+                <div className="relative h-full flex flex-col items-center justify-center px-6 py-4 text-center">
+                  <div className="text-primary-foreground font-bold text-lg uppercase tracking-wider mb-1 drop-shadow-lg">
+                    SPECIAL
+                  </div>
+                  <div className="text-primary-foreground font-bold text-2xl uppercase tracking-wider mb-2 drop-shadow-lg">
+                    {discountBanner.discount_percent}% OFF
+                  </div>
+                  <div className="text-primary-foreground font-semibold text-sm uppercase tracking-wide drop-shadow-lg">
+                    {discountBanner.title}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
         <div className="absolute inset-0 grid-pattern opacity-30" />

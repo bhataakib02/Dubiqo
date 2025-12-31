@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,11 +72,7 @@ export default function AdminQuotes() {
   const backHref = cameFromStaff ? '/staff' : '/admin/dashboard';
   const backLabel = cameFromStaff ? 'Back to Staff Workspace' : 'Back to Dashboard';
 
-  useEffect(() => {
-    initializeQuotes();
-  }, []);
-
-  const initializeQuotes = async () => {
+  const initializeQuotes = useCallback(async () => {
     if (!supabase) {
       await loadQuotes();
       return;
@@ -126,7 +122,12 @@ export default function AdminQuotes() {
       console.error('Error initializing quotes view:', error);
       await loadQuotes();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeQuotes();
+  }, [initializeQuotes]);
 
   const loadQuotes = async () => {
     if (!supabase) return;
@@ -154,7 +155,9 @@ export default function AdminQuotes() {
           (roles || []).forEach((r: any) => {
             if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
           });
-        } catch {}
+        } catch {
+          // Ignore errors when fetching user roles
+        }
         result = result.filter((q: any) => q.client_id && myClientIds.has(q.client_id) && clientRoleMap.has(q.client_id));
       }
       setQuotes(result);
@@ -347,7 +350,7 @@ export default function AdminQuotes() {
 
       if (error) throw error;
       toast.success('Quote deleted successfully');
-      loadQuotes();
+      await loadQuotes();
     } catch (error) {
       console.error('Error deleting quote:', error);
       toast.error('Failed to delete quote');

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,12 +92,7 @@ export default function AdminTickets() {
   const backHref = cameFromStaff ? '/staff' : '/admin/dashboard';
   const backLabel = cameFromStaff ? 'Back to Staff Workspace' : 'Back to Dashboard';
 
-  useEffect(() => {
-    initializeTickets();
-    loadStaffMembers();
-  }, []);
-
-  const initializeTickets = async () => {
+  const initializeTickets = useCallback(async () => {
     if (!supabase) return;
 
     try {
@@ -128,7 +123,13 @@ export default function AdminTickets() {
       console.error('Error initializing tickets view:', error);
       await loadTickets();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeTickets();
+    loadStaffMembers();
+  }, [initializeTickets]);
 
   const loadStaffMembers = async () => {
     if (!supabase) return;
@@ -412,6 +413,7 @@ export default function AdminTickets() {
   };
 
   const handleDeleteTicket = async (ticket: TicketWithClient) => {
+    if (!supabase) return;
     if (!confirm(`Are you sure you want to delete ticket "${ticket.title}"?`)) {
       return;
     }
@@ -424,7 +426,8 @@ export default function AdminTickets() {
       await loadTickets();
     } catch (error) {
       console.error('Error deleting ticket:', error);
-      toast.error('Failed to delete ticket');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete ticket: ${errorMessage}`);
     }
   };
 
@@ -638,7 +641,9 @@ export default function AdminTickets() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
                                   setOpenDropdownId(null);
                                   handleDeleteTicket(ticket);
                                 }}

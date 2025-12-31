@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { RefreshCw, Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,6 +38,7 @@ type CaseStudy = {
   image: string;
   excerpt: string;
   stats: Stat[] | null;
+  published: boolean | null;
   created_at?: string;
 };
 
@@ -47,6 +49,7 @@ const emptyStudy: Omit<CaseStudy, 'id'> = {
   category: '',
   image: '',
   excerpt: '',
+  published: true,
   stats: [
     { label: 'Metric 1', value: '' },
     { label: 'Metric 2', value: '' },
@@ -60,7 +63,7 @@ export default function CaseStudiesAdmin() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyStudy);
+  const [form, setForm] = useState<Omit<CaseStudy, 'id'>>(emptyStudy);
 
   const loadItems = async () => {
     if (!supabase) return;
@@ -101,6 +104,7 @@ export default function CaseStudiesAdmin() {
       image: item.image || '',
       excerpt: item.excerpt || '',
       stats: item.stats || emptyStudy.stats,
+      published: item.published ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -121,6 +125,7 @@ export default function CaseStudiesAdmin() {
         image: form.image.trim(),
         excerpt: form.excerpt.trim(),
         stats: form.stats || [],
+        published: form.published ?? true,
       };
 
       if (editingId) {
@@ -144,6 +149,34 @@ export default function CaseStudiesAdmin() {
       toast.error('Failed to save case study');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const togglePublish = async (item: CaseStudy) => {
+    if (!supabase) return;
+    try {
+      // Handle null published field (treat null as false)
+      const currentPublished = item.published ?? false;
+      const published = !currentPublished;
+      
+      const { data, error } = await supabase
+        .from('case_studies' as any)
+        .update({ published: published })
+        .eq('id', item.id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+      
+      console.log('Publish toggle result:', data);
+      toast.success(published ? '✅ Published - Case study is now visible on website' : '❌ Unpublished - Case study hidden from website');
+      await loadItems();
+    } catch (err: any) {
+      console.error('Error toggling publish:', err);
+      toast.error(err?.message || 'Failed to change publish state. Check console for details.');
     }
   };
 
@@ -220,6 +253,7 @@ export default function CaseStudiesAdmin() {
                   <TableHead>Slug</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -230,7 +264,19 @@ export default function CaseStudiesAdmin() {
                     <TableCell>{item.slug}</TableCell>
                     <TableCell>{item.client}</TableCell>
                     <TableCell>{item.category}</TableCell>
+                    <TableCell>
+                      <Badge variant={item.published ? "default" : "secondary"}>
+                        {item.published ? "Published" : "Draft"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button 
+                        variant={item.published ? "outline" : "default"} 
+                        size="sm" 
+                        onClick={() => togglePublish(item)}
+                      >
+                        {item.published ? "Unpublish" : "Publish"}
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
@@ -336,6 +382,16 @@ export default function CaseStudiesAdmin() {
                   </div>
                 ))}
               </div>
+            </div>
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="published"
+                checked={form.published ?? true}
+                onCheckedChange={(checked) => setForm({ ...form, published: checked as boolean })}
+              />
+              <Label htmlFor="published" className="cursor-pointer font-normal">
+                Published (visible on website)
+              </Label>
             </div>
           </div>
           <DialogFooter>

@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { RefreshCw, Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,6 +35,7 @@ type PortfolioItem = {
   image: string;
   technologies: string[] | null;
   link: string | null;
+  published: boolean | null;
   created_at?: string;
 };
 
@@ -44,6 +46,7 @@ const emptyItem: Omit<PortfolioItem, 'id'> = {
   image: '',
   technologies: [],
   link: '',
+  published: true,
 };
 
 export default function AdminPortfolio() {
@@ -92,6 +95,7 @@ export default function AdminPortfolio() {
       image: item.image || '',
       technologies: item.technologies || [],
       link: item.link || '',
+      published: item.published ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -111,6 +115,7 @@ export default function AdminPortfolio() {
         image: form.image.trim(),
         technologies: form.technologies || [],
         link: form.link?.trim() || null,
+        published: form.published ?? true,
       };
       if (editingId) {
         const { error } = await supabase
@@ -150,6 +155,27 @@ export default function AdminPortfolio() {
     } catch (error) {
       console.error('Error deleting portfolio item:', error);
       toast.error('Failed to delete');
+    }
+  };
+
+  const togglePublish = async (item: PortfolioItem) => {
+    if (!supabase) return;
+    try {
+      const currentPublished = item.published ?? false;
+      const published = !currentPublished;
+      
+      const { error } = await supabase
+        .from('portfolio_items' as any)
+        .update({ published })
+        .eq('id', item.id);
+        
+      if (error) throw error;
+      
+      toast.success(published ? '✅ Published - Portfolio item is now visible on website' : '❌ Unpublished - Portfolio item hidden from website');
+      await loadItems();
+    } catch (err: any) {
+      console.error('Error toggling publish:', err);
+      toast.error(err?.message || 'Failed to change publish state');
     }
   };
 
@@ -203,6 +229,7 @@ export default function AdminPortfolio() {
                   <TableHead>Category</TableHead>
                   <TableHead>Tech</TableHead>
                   <TableHead>Link</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -234,7 +261,19 @@ export default function AdminPortfolio() {
                         '-'
                       )}
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={item.published ? "default" : "secondary"}>
+                        {item.published ? "Published" : "Draft"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button 
+                        variant={item.published ? "outline" : "default"} 
+                        size="sm" 
+                        onClick={() => togglePublish(item)}
+                      >
+                        {item.published ? "Unpublish" : "Publish"}
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(item)}>
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
@@ -327,6 +366,16 @@ export default function AdminPortfolio() {
                 }
                 placeholder="React, TypeScript, Node.js"
               />
+            </div>
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="published"
+                checked={form.published ?? true}
+                onCheckedChange={(checked) => setForm({ ...form, published: checked as boolean })}
+              />
+              <Label htmlFor="published" className="cursor-pointer font-normal">
+                Published (visible on website)
+              </Label>
             </div>
           </div>
           <DialogFooter>

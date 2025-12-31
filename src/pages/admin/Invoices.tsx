@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,12 +79,7 @@ export default function AdminInvoices() {
     status: 'draft',
   });
 
-  useEffect(() => {
-    initializeInvoices();
-    loadClients();
-  }, []);
-
-  const initializeInvoices = async () => {
+  const initializeInvoices = useCallback(async () => {
     if (!supabase) {
       await loadInvoices();
       return;
@@ -134,7 +129,13 @@ export default function AdminInvoices() {
       console.error('Error initializing invoices view:', error);
       await loadInvoices();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeInvoices();
+    loadClients();
+  }, [initializeInvoices]);
 
   const loadClients = async () => {
     if (!supabase) return;
@@ -190,7 +191,9 @@ export default function AdminInvoices() {
           (roles || []).forEach((r: any) => {
             if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
           });
-        } catch {}
+        } catch {
+          // Ignore errors when fetching user roles
+        }
         result = result.filter((inv: any) => inv.client_id && myClientIds.has(inv.client_id) && clientRoleMap.has(inv.client_id));
       }
       setInvoices(result);
@@ -335,10 +338,11 @@ export default function AdminInvoices() {
       const { error } = await supabase.from('invoices').delete().eq('id', invoice.id);
       if (error) throw error;
       toast.success('Invoice deleted successfully');
-      loadInvoices();
+      await loadInvoices();
     } catch (error) {
       console.error('Error deleting invoice:', error);
-      toast.error('Failed to delete invoice');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete invoice: ${errorMessage}`);
     }
   };
 
@@ -643,7 +647,11 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(invoice)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDelete(invoice);
+                              }}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="w-4 h-4" />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,12 +51,7 @@ export default function AdminProjects() {
     budget: ""
   });
 
-  useEffect(() => {
-    initializeProjects();
-    loadClients();
-  }, []);
-
-  const initializeProjects = async () => {
+  const initializeProjects = useCallback(async () => {
     if (!supabase) {
       await loadProjects();
       return;
@@ -104,9 +99,16 @@ export default function AdminProjects() {
       await loadProjects();
     } catch (error) {
       console.error('Error initializing projects view:', error);
+      // Still try to load projects even if initialization fails
       await loadProjects();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    initializeProjects();
+    loadClients();
+  }, [initializeProjects]);
 
   const loadClients = async () => {
     if (!supabase) return;
@@ -135,17 +137,45 @@ export default function AdminProjects() {
           (roles || []).forEach((r: any) => {
             if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
           });
-        } catch {}
+        } catch {
+          // Ignore errors when fetching user roles
+        }
         result = result.filter((p: any) => myClientIds.has(p.client_id) && clientRoleMap.has(p.client_id));
       }
       setProjects(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading projects:', error);
-      toast.error('Failed to load projects');
+      const errorMessage = error?.message || 'Unknown error';
+      console.error('Full error details:', {
+        message: errorMessage,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      
+      // More specific error message
+      if (error?.code === 'PGRST116' || errorMessage.includes('permission denied') || errorMessage.includes('row-level security')) {
+        toast.error('Permission denied', {
+          description: 'You may not have access to view projects. Please contact an administrator.',
+        });
+      } else if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+        toast.error('Database error', {
+          description: 'The projects table may not exist. Please check your database setup.',
+        });
+      } else {
+        toast.error('Failed to load projects', {
+          description: errorMessage,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    initializeProjects();
+    loadClients();
+  }, [initializeProjects]);
 
   const handleCreate = async () => {
     if (!supabase) return;
@@ -206,13 +236,47 @@ export default function AdminProjects() {
     if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', project.id);
-      if (error) throw error;
+      // First verify the project exists
+      const { data: existingProject, error: checkError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', project.id)
+        .single();
+      
+      if (checkError || !existingProject) {
+        toast.error('Project not found');
+        return;
+      }
+
+      // Perform the deletion
+      const { data, error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', project.id)
+        .select();
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      // Verify deletion succeeded by checking if data was returned
+      if (!data || data.length === 0) {
+        console.error('No rows deleted - possible permission issue');
+        toast.error('Failed to delete project. You may not have permission.');
+        // Still reload to refresh the list
+        loadProjects();
+        return;
+      }
+      
       toast.success('Project deleted successfully');
       loadProjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting project:', error);
-      toast.error('Failed to delete project');
+      const errorMessage = error?.message || error?.details || 'Failed to delete project';
+      toast.error(errorMessage);
+      // Reload projects to ensure UI is in sync
+      loadProjects();
     }
   };
 

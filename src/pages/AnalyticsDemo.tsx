@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Section } from "@/components/ui/section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,21 +48,12 @@ export default function AnalyticsDemo() {
   const [trafficSources, setTrafficSources] = useState<any[]>([]);
   const [realtimeUsers, setRealtimeUsers] = useState(0);
 
-  useEffect(() => {
-    loadTelemetryData();
-    // Simulate realtime users
-    const interval = setInterval(() => {
-      setRealtimeUsers(Math.floor(Math.random() * 50) + 80);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [timeRange]);
-
-  const loadTelemetryData = async () => {
+  const loadTelemetryData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Get date range
       const now = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
       switch (timeRange) {
         case "24h":
           startDate.setHours(startDate.getHours() - 24);
@@ -136,7 +127,16 @@ export default function AnalyticsDemo() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    loadTelemetryData();
+    // Simulate realtime users
+    const interval = setInterval(() => {
+      setRealtimeUsers(Math.floor(Math.random() * 50) + 80);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [loadTelemetryData]);
 
   const generateDemoValue = (base: number, variance: number) => {
     return base + Math.floor(Math.random() * variance - variance / 2);

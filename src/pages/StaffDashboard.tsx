@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,7 @@ export default function StaffDashboard() {
   const [searchValue, setSearchValue] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadStaffStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadStaffStats = async () => {
+  const loadStaffStats = useCallback(async () => {
     if (!supabase) return;
 
     setIsRefreshing(true);
@@ -101,7 +96,11 @@ export default function StaffDashboard() {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadStaffStats();
+  }, [loadStaffStats]);
 
   const handleRefresh = () => {
     loadStaffStats();

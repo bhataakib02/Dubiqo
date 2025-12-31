@@ -146,17 +146,39 @@ export default function BlogsAdmin() {
   const togglePublish = async (post: BlogPost) => {
     if (!supabase) return;
     try {
-      const published = !post.published;
-      const payload: any = { published };
-      if (published) payload.published_at = new Date().toISOString();
-      else payload.published_at = null;
-      const { error } = await supabase.from('blog_posts').update(payload).eq('id', post.id);
-      if (error) throw error;
-      toast.success(published ? 'Published' : 'Unpublished');
+      // Handle null published field (treat null as false)
+      const currentPublished = post.published ?? false;
+      const published = !currentPublished;
+      
+      const payload: any = { 
+        published: published,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (published) {
+        payload.published_at = new Date().toISOString();
+      } else {
+        payload.published_at = null;
+      }
+      
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .update(payload)
+        .eq('id', post.id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+      
+      console.log('Publish toggle result:', data);
+      toast.success(published ? '✅ Published - Post is now visible on website' : '❌ Unpublished - Post hidden from website');
       loadPosts();
     } catch (err: any) {
-      console.error('Error toggling publish', err);
-      toast.error(err?.message || 'Failed to change publish state');
+      console.error('Error toggling publish:', err);
+      toast.error(err?.message || 'Failed to change publish state. Check console for details.');
     }
   };
 

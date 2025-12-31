@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -22,39 +22,55 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupName, setSignupName] = useState('');
 
-  const checkRoleAndRedirect = async (userId: string, userEmail: string) => {
-    console.log('checkRoleAndRedirect called with:', { userId, userEmail });
+  const checkRoleAndRedirect = useCallback(async (userId: string, userEmail: string) => {
+    try {
+      console.log('checkRoleAndRedirect called with:', { userId, userEmail });
 
-    const role = await ensureUserRole(userId, userEmail);
-    const redirectPath = getRedirectPath(role);
+      // Get role with timeout protection
+      let role: string;
+      try {
+        role = await Promise.race([
+          ensureUserRole(userId, userEmail),
+          new Promise<string>((_, reject) => 
+            setTimeout(() => reject(new Error('Role check timeout')), 5000)
+          )
+        ]);
+      } catch (roleError) {
+        console.warn('Role check failed or timed out, defaulting to client:', roleError);
+        // Default to client if role check fails
+        role = 'client';
+      }
 
-    console.log('Redirecting to:', { role, redirectPath });
-    navigate(redirectPath, { replace: true });
-  };
+      const redirectPath = getRedirectPath(role);
+      console.log('Redirecting to:', { role, redirectPath });
+      
+      // Use window.location for immediate, reliable redirect
+      window.location.href = redirectPath;
+    } catch (error) {
+      console.error('Error in checkRoleAndRedirect:', error);
+      // Fallback: redirect to home page
+      window.location.href = '/';
+    }
+  }, []);
 
   useEffect(() => {
-    const checkUser = async () => {
-      if (!supabase) return;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        await checkRoleAndRedirect(session.user.id, session.user.email || '');
-      }
-    };
-    checkUser();
-
     if (!supabase) return;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await checkRoleAndRedirect(session.user.id, session.user.email || '');
+      // Only redirect on sign in events, not on initial load or token refresh
+      // This prevents redirect loops when user doesn't have proper role
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Small delay to ensure session is fully established
+        setTimeout(async () => {
+          await checkRoleAndRedirect(session.user.id, session.user.email || '');
+        }, 100);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [checkRoleAndRedirect]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,13 +94,27 @@ export default function Auth() {
             ? 'Invalid email or password'
             : error.message
         );
-      } else if (data.user) {
-        toast.success('Welcome back!');
-        await checkRoleAndRedirect(data.user.id, data.user.email || '');
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      toast.error('An unexpected error occurred');
-    } finally {
+      
+      if (data.user) {
+        toast.success('Welcome back!');
+        // Redirect immediately
+        try {
+          await checkRoleAndRedirect(data.user.id, data.user.email || '');
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+          setIsLoading(false);
+          toast.error('Login successful but redirect failed. Please navigate manually.');
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error?.message || 'An unexpected error occurred';
+      toast.error(errorMessage.includes('Invalid') ? errorMessage : 'Login failed. Please check your credentials and try again.');
       setIsLoading(false);
     }
   };
@@ -115,13 +145,27 @@ export default function Auth() {
             ? 'An account with this email already exists'
             : error.message
         );
-      } else if (data.user) {
-        toast.success('Account created successfully!');
-        await checkRoleAndRedirect(data.user.id, data.user.email || '');
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      toast.error('An unexpected error occurred');
-    } finally {
+      
+      if (data.user) {
+        toast.success('Account created successfully!');
+        // Redirect immediately
+        try {
+          await checkRoleAndRedirect(data.user.id, data.user.email || '');
+        } catch (redirectError) {
+          console.error('Redirect error:', redirectError);
+          setIsLoading(false);
+          toast.error('Account created but redirect failed. Please navigate manually.');
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      const errorMessage = error?.message || 'An unexpected error occurred';
+      toast.error(errorMessage.includes('already') ? errorMessage : 'Failed to create account. Please try again.');
       setIsLoading(false);
     }
   };
