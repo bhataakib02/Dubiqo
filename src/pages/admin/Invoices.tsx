@@ -62,6 +62,9 @@ export default function AdminInvoices() {
   const [invoices, setInvoices] = useState<InvoiceWithClient[]>([]);
   const [clients, setClients] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [staffOnlyView, setStaffOnlyView] = useState(false);
+  const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -77,9 +80,61 @@ export default function AdminInvoices() {
   });
 
   useEffect(() => {
-    loadInvoices();
+    initializeInvoices();
     loadClients();
   }, []);
+
+  const initializeInvoices = async () => {
+    if (!supabase) {
+      await loadInvoices();
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        await loadInvoices();
+        return;
+      }
+
+      setCurrentUserId(user.id);
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const isAdmin = roles?.some((r) => r.role === 'admin');
+      const isStaff = roles?.some((r) => r.role === 'staff');
+      const staffOnly = !!isStaff && !isAdmin;
+      setStaffOnlyView(staffOnly);
+
+      if (staffOnly) {
+        const { data: myTickets, error } = await supabase
+          .from('tickets')
+          .select('client_id')
+          .eq('assigned_to', user.id);
+
+        if (error) {
+          console.error('Error loading staff invoice tickets:', error);
+        } else {
+          const ids = new Set<string>();
+          (myTickets || []).forEach((t: any) => {
+            if (t.client_id) ids.add(t.client_id);
+          });
+          setMyClientIds(ids);
+        }
+      }
+
+      await loadInvoices();
+    } catch (error) {
+      console.error('Error initializing invoices view:', error);
+      await loadInvoices();
+    }
+  };
 
   const loadClients = async () => {
     if (!supabase) return;
@@ -125,7 +180,20 @@ export default function AdminInvoices() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setInvoices(data || []);
+
+      let result = data || [];
+      if (staffOnlyView && myClientIds.size > 0) {
+        // Only invoices whose client is both in myClientIds and the client has the role 'client'
+        const clientRoleMap = new Map<string, string>();
+        try {
+          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+          (roles || []).forEach((r: any) => {
+            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
+          });
+        } catch {}
+        result = result.filter((inv: any) => inv.client_id && myClientIds.has(inv.client_id) && clientRoleMap.has(inv.client_id));
+      }
+      setInvoices(result);
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');
@@ -152,27 +220,60 @@ export default function AdminInvoices() {
     }
 
     try {
-      const amount = Math.round(parseFloat(formData.amount) * 100);
-      const taxAmount = Math.round(parseFloat(formData.tax_amount || '0') * 100);
-      const totalAmount = amount + taxAmount;
+      // Validate and parse amount
+      const amountValue = parseFloat(formData.amount);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        toast.error('Please enter a valid amount greater than 0');
+        return;
+      }
 
-      const { error } = await supabase.from('invoices').insert({
+      // Validate and parse tax amount
+      const taxValue = parseFloat(formData.tax_amount || '0');
+      if (isNaN(taxValue) || taxValue < 0) {
+        toast.error('Please enter a valid tax amount (0 or greater)');
+        return;
+      }
+
+      // Date input type="date" already provides YYYY-MM-DD format, use it directly
+      // But validate it's not empty
+      if (!formData.due_date || formData.due_date.trim() === '') {
+        toast.error('Please select a due date');
+        return;
+      }
+
+      // Database stores amounts as numeric (rupees), not paise
+      const subtotal = amountValue;
+      const tax = taxValue;
+      const total = subtotal + tax;
+
+      const invoiceData = {
         invoice_number: generateInvoiceNumber(),
         client_id: formData.client_id,
-        amount,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
-        due_date: formData.due_date,
-        status: formData.status,
-      });
+        subtotal,
+        tax,
+        total_amount: total,
+        due_date: formData.due_date, // Already in YYYY-MM-DD format from date input
+        status: formData.status || 'draft',
+      };
 
-      if (error) throw error;
+      console.log('Creating invoice with data:', invoiceData);
+
+      const { error, data } = await supabase.from('invoices').insert(invoiceData).select();
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        toast.error(error.message || 'Failed to create invoice. Please check console for details.');
+        return;
+      }
+      
+      console.log('Invoice created successfully:', data);
       toast.success('Invoice created successfully');
       resetForm();
+      setIsCreateOpen(false);
       loadInvoices();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating invoice:', error);
-      toast.error('Failed to create invoice');
+      toast.error(error?.message || 'Failed to create invoice. Please try again.');
     }
   };
 
@@ -180,15 +281,28 @@ export default function AdminInvoices() {
     if (!supabase || !editingInvoice) return;
 
     try {
-      const amount = Math.round(parseFloat(formData.amount) * 100);
-      const taxAmount = Math.round(parseFloat(formData.tax_amount || '0') * 100);
-      const totalAmount = amount + taxAmount;
+      // Validate and parse amounts
+      const amountValue = parseFloat(formData.amount);
+      if (isNaN(amountValue) || amountValue <= 0) {
+        toast.error('Please enter a valid amount greater than 0');
+        return;
+      }
+      const taxValue = parseFloat(formData.tax_amount || '0');
+      if (isNaN(taxValue) || taxValue < 0) {
+        toast.error('Please enter a valid tax amount (0 or greater)');
+        return;
+      }
+      
+      // Database stores amounts as numeric (rupees), not paise
+      const subtotal = amountValue;
+      const tax = taxValue;
+      const total = subtotal + tax;
 
       const updateData: Record<string, any> = {
         client_id: formData.client_id,
-        amount,
-        tax_amount: taxAmount,
-        total_amount: totalAmount,
+        subtotal,
+        tax,
+        total_amount: total,
         due_date: formData.due_date,
         status: formData.status,
         updated_at: new Date().toISOString(),
@@ -230,10 +344,12 @@ export default function AdminInvoices() {
 
   const handleEdit = (invoice: InvoiceWithClient) => {
     setEditingInvoice(invoice);
+    // Database stores amounts as numeric (rupees), access as subtotal and tax
+    const invoiceData = invoice as any;
     setFormData({
       client_id: invoice.client_id,
-      amount: (Number(invoice.amount) / 100).toString(),
-      tax_amount: (Number(invoice.tax_amount || 0) / 100).toString(),
+      amount: (invoiceData.subtotal || 0).toString(),
+      tax_amount: (invoiceData.tax || 0).toString(),
       due_date: invoice.due_date,
       status: invoice.status,
     });
@@ -275,9 +391,9 @@ Bill To:
 ${invoice.client?.full_name || 'N/A'}
 ${invoice.client?.email || 'N/A'}
 
-Amount: ${formatINR(Number(invoice.amount))}
-Tax: ${formatINR(Number(invoice.tax_amount || 0))}
-Total: ${formatINR(Number(invoice.total_amount))}
+Amount: ${formatINR(Number((invoice as any).subtotal || 0) * 100)}
+Tax: ${formatINR(Number((invoice as any).tax || 0) * 100)}
+Total: ${formatINR(Number(invoice.total_amount) * 100)}
 
 Status: ${invoice.status.toUpperCase()}
 ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}` : ''}
@@ -321,11 +437,11 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
 
   const totalPending = filteredInvoices
     .filter((i) => ['pending', 'sent', 'overdue'].includes(i.status))
-    .reduce((sum, i) => sum + Number(i.total_amount), 0);
+    .reduce((sum, i) => sum + Number(i.total_amount) * 100, 0);
 
   const totalPaid = filteredInvoices
     .filter((i) => i.status === 'paid')
-    .reduce((sum, i) => sum + Number(i.total_amount), 0);
+    .reduce((sum, i) => sum + Number(i.total_amount) * 100, 0);
 
   // Data quality checks
   const invoiceIssues = filteredInvoices.filter((invoice) => {
@@ -483,7 +599,7 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
                           </div>
                         </TableCell>
                         <TableCell className="font-semibold">
-                          {formatINR(Number(invoice.total_amount))}
+                          {formatINR(Number(invoice.total_amount) * 100)}
                         </TableCell>
                         <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                         <TableCell>
@@ -669,18 +785,18 @@ ${invoice.paid_at ? `Paid On: ${new Date(invoice.paid_at).toLocaleDateString()}`
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-semibold">{formatINR(Number(viewingInvoice.amount))}</p>
+                  <p className="font-semibold">{formatINR(Number((viewingInvoice as any).subtotal || 0) * 100)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tax</p>
                   <p className="font-semibold">
-                    {formatINR(Number(viewingInvoice.tax_amount || 0))}
+                    {formatINR(Number((viewingInvoice as any).tax || 0) * 100)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total</p>
                   <p className="font-bold text-lg">
-                    {formatINR(Number(viewingInvoice.total_amount))}
+                    {formatINR(Number(viewingInvoice.total_amount) * 100)}
                   </p>
                 </div>
               </div>

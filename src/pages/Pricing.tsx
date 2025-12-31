@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, ArrowRight, HelpCircle } from "lucide-react";
 import {
   Accordion,
@@ -11,62 +13,19 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-const plans = [
-  {
-    name: "Starter",
-    description: "Perfect for small businesses and startups",
-    price: "₹2,499",
-    priceNote: "one-time",
-    features: [
-      "Up to 5 pages",
-      "Responsive design",
-      "Basic SEO setup",
-      "Contact form",
-      "1 month support",
-      "2 revision rounds",
-    ],
-    cta: "Get Started",
-    popular: false,
-  },
-  {
-    name: "Professional",
-    description: "For growing businesses that need more",
-    price: "₹5,999",
-    priceNote: "one-time",
-    features: [
-      "Up to 15 pages",
-      "Custom design",
-      "Advanced SEO",
-      "CMS integration",
-      "Analytics setup",
-      "3 months support",
-      "5 revision rounds",
-      "Performance optimization",
-    ],
-    cta: "Get Started",
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    description: "Full-featured solution for larger organizations",
-    price: "Custom",
-    priceNote: "contact us",
-    features: [
-      "Unlimited pages",
-      "Custom functionality",
-      "E-commerce ready",
-      "API integrations",
-      "Priority support",
-      "Unlimited revisions",
-      "SLA guarantee",
-      "Dedicated manager",
-    ],
-    cta: "Contact Sales",
-    popular: false,
-  },
-];
+type PricingPlan = {
+  id: string;
+  name: string;
+  price_cents: number | null;
+  interval: string | null;
+  currency: string | null;
+  features: string[] | null;
+  active: boolean | null;
+  metadata?: any;
+};
 
 const addOns = [
   { name: "Extra Pages", price: "₹150/page" },
@@ -100,7 +59,58 @@ const faqs = [
   },
 ];
 
+const formatPrice = (priceCents: number | null, currency: string | null) => {
+  if (priceCents === null) return "Custom";
+  const rupees = priceCents / 100;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: currency || 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(rupees);
+};
+
 export default function Pricing() {
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .eq('active', true)
+        .order('price_cents', { ascending: true, nullsLast: true });
+      
+      if (error) throw error;
+      setPlans((data || []) as PricingPlan[]);
+    } catch (error) {
+      console.error('Error loading pricing plans:', error);
+      // Fallback to empty array if database fails
+      setPlans([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Determine if a plan is popular (middle plan if 3 or more, or first if less)
+  const getPopularIndex = () => {
+    if (plans.length >= 3) return 1;
+    if (plans.length === 2) return 0;
+    return -1;
+  };
+
+  const popularIndex = getPopularIndex();
+
   return (
     <Layout>
       {/* Hero */}
@@ -123,55 +133,99 @@ export default function Pricing() {
       {/* Pricing Cards */}
       <Section>
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {plans.map((plan) => (
-              <Card
-                key={plan.name}
-                className={cn(
-                  "relative bg-card/50 backdrop-blur border-border/50 transition-all",
-                  plan.popular && "border-primary/50 glow-border scale-105"
-                )}
-              >
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gradient-primary text-primary-foreground">
-                    Most Popular
-                  </Badge>
-                )}
-                <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-center">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm ml-2">
-                      {plan.priceNote}
-                    </span>
-                  </div>
-                  
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-3">
-                        <CheckCircle className="w-5 h-5 text-primary shrink-0" />
-                        <span className="text-sm text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  <Button
-                    className={cn("w-full", plan.popular && "glow-primary")}
-                    variant={plan.popular ? "default" : "outline"}
-                    asChild
-                  >
-                    <Link to={plan.name === "Enterprise" ? "/contact" : "/quote"}>
-                      {plan.cta}
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="bg-card/50 backdrop-blur border-border/50">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-32 mb-2" />
+                    <Skeleton className="h-4 w-48" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-12 w-32 mb-6" />
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">No pricing plans available at the moment.</p>
+              <p className="text-muted-foreground text-sm mt-2">Please check back later or contact us for a custom quote.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {plans.map((plan, index) => (
+                <Card
+                  key={plan.id}
+                  className={cn(
+                    "relative bg-card/50 backdrop-blur border-border/50 transition-all",
+                    index === popularIndex && "border-primary/50 glow-border scale-105"
+                  )}
+                >
+                  {index === popularIndex && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 gradient-primary text-primary-foreground">
+                      Most Popular
+                    </Badge>
+                  )}
+                  <CardHeader className="text-center pb-2">
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <CardDescription>
+                      {plan.features && plan.features.length > 0 && plan.features[0].length > 30
+                        ? plan.features[0]
+                        : `Perfect for your needs`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="text-center">
+                      <span className="text-4xl font-bold">
+                        {formatPrice(plan.price_cents, plan.currency)}
+                      </span>
+                      {plan.price_cents !== null && plan.interval && (
+                        <span className="text-muted-foreground text-sm ml-2">
+                          /{plan.interval}
+                        </span>
+                      )}
+                      {plan.price_cents === null && (
+                        <span className="text-muted-foreground text-sm ml-2">
+                          contact us
+                        </span>
+                      )}
+                    </div>
+                    
+                    {plan.features && plan.features.length > 0 && (
+                      <ul className="space-y-3">
+                        {/* Skip first feature if it's a description (longer than 30 chars) */}
+                        {plan.features
+                          .filter((feature, idx) => idx !== 0 || feature.length <= 30)
+                          .map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-3">
+                              <CheckCircle className="w-5 h-5 text-primary shrink-0" />
+                              <span className="text-sm text-muted-foreground">{feature}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                    
+                    <Button
+                      className={cn("w-full", index === popularIndex && "glow-primary")}
+                      variant={index === popularIndex ? "default" : "outline"}
+                      asChild
+                    >
+                      <Link to={plan.price_cents === null ? "/contact" : "/quote"}>
+                        {plan.price_cents === null ? "Contact Sales" : "Get Started"}
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
 

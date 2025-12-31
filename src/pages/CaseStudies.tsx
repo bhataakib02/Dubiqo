@@ -74,23 +74,54 @@ export default function CaseStudies() {
   const [isLoading, setIsLoading] = useState(false);
 
   const loadStudies = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // First try to load all case studies
+      let query = supabase
         .from('case_studies')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setCaseStudies(data as typeof staticCaseStudies);
-      } else {
-        setCaseStudies(staticCaseStudies);
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        // If RLS policy error, try with different approach
+        console.error('Error loading case studies:', error);
+        throw error;
       }
-    } catch (error) {
+      
+      if (!data || data.length === 0) {
+        setCaseStudies([]);
+        return;
+      }
+      
+      // Filter by published if field exists, otherwise show all
+      let filteredData = data;
+      if (data.length > 0 && 'published' in data[0]) {
+        filteredData = data.filter((item: any) => item.published === true || item.published === null);
+      }
+      
+      // Map database fields to component format
+      const mapped = filteredData.map((item: any) => ({
+        id: item.id,
+        slug: item.slug,
+        title: item.title,
+        client: item.client_name || item.client || 'Unknown',
+        category: item.category || 'General',
+        image: item.featured_image || item.image || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=500&fit=crop',
+        excerpt: item.excerpt || item.metadata?.excerpt || '',
+        stats: item.stats || item.metadata?.stats || [],
+      }));
+      
+      setCaseStudies(mapped);
+    } catch (error: any) {
       console.error('Error loading case studies:', error);
-      toast.error('Failed to load case studies. Showing defaults.');
-      setCaseStudies(staticCaseStudies);
+      toast.error(error?.message || 'Failed to load case studies');
+      setCaseStudies([]);
     } finally {
       setIsLoading(false);
     }
@@ -125,6 +156,11 @@ export default function CaseStudies() {
           {isLoading ? (
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : caseStudies.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">No case studies available yet.</p>
+              <p className="text-muted-foreground text-sm mt-2">Check back soon for new case studies!</p>
             </div>
           ) : (
             <div className="space-y-16">

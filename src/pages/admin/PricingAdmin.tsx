@@ -29,6 +29,7 @@ import type { Tables } from '@/integrations/supabase/types';
 type PricingPlan = {
   id: string;
   name: string;
+  description?: string | null;
   price_cents: number | null;
   interval: 'monthly' | 'yearly' | string | null;
   currency?: string | null;
@@ -45,6 +46,7 @@ export default function PricingAdmin() {
   const [editing, setEditing] = useState<PricingPlan | null>(null);
   const [form, setForm] = useState({
     name: '',
+    description: '',
     price: '',
     interval: 'monthly',
     currency: 'INR',
@@ -78,6 +80,7 @@ export default function PricingAdmin() {
     setEditing(null);
     setForm({
       name: '',
+      description: '',
       price: '',
       interval: 'monthly',
       currency: 'INR',
@@ -89,12 +92,23 @@ export default function PricingAdmin() {
 
   const openEdit = (p: PricingPlan) => {
     setEditing(p);
+    const features = p.features || [];
+    // Extract description from first feature if it looks like a description
+    // (heuristic: if first feature is longer than 30 chars, treat as description)
+    let description = '';
+    let featureList = features;
+    if (features.length > 0 && features[0].length > 30) {
+      description = features[0];
+      featureList = features.slice(1);
+    }
+    
     setForm({
       name: p.name || '',
+      description: description,
       price: p.price_cents != null ? String((p.price_cents || 0) / 100) : '',
       interval: p.interval || 'monthly',
       currency: p.currency || 'INR',
-      features: (p.features || []).join(', '),
+      features: featureList.join(', '),
       active: !!p.active,
     });
     setIsDialogOpen(true);
@@ -120,6 +134,13 @@ export default function PricingAdmin() {
         : null,
       active: form.active,
     };
+    
+    // Store description in features array as first item if provided
+    // Since metadata column doesn't exist, we'll prepend description to features
+    if (form.description.trim()) {
+      const features = payload.features || [];
+      payload.features = [form.description.trim(), ...features];
+    }
 
     try {
       if (editing) {
@@ -244,37 +265,48 @@ export default function PricingAdmin() {
             <DialogTitle>{editing ? 'Edit Plan' : 'New Plan'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Price (e.g., 9.99)</Label>
-                <Input
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g., Starter, Professional, New Year Special"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="e.g., Perfect for small businesses, New Year offer, etc."
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Price (₹)</Label>
+                <Input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  placeholder="e.g., 2499"
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Interval</Label>
                 <Input
                   value={form.interval}
                   onChange={(e) => setForm({ ...form, interval: e.target.value })}
+                  placeholder="e.g., monthly, yearly, one-time"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Input
-                  value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                />
-              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Input
+                value={form.currency}
+                onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                placeholder="INR, USD, etc."
+              />
             </div>
             <div className="space-y-2">
               <Label>Features (comma separated)</Label>

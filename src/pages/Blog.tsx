@@ -1,80 +1,78 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Calendar, Clock, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const posts = [
-  {
-    id: "1",
-    slug: "future-of-web-development-2024",
-    title: "The Future of Web Development in 2024",
-    excerpt: "Explore the latest trends shaping web development, from AI integration to edge computing.",
-    image: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&h=400&fit=crop",
-    category: "Technology",
-    author: "Alex Morgan",
-    date: "Nov 15, 2024",
-    readTime: "5 min read",
-  },
-  {
-    id: "2",
-    slug: "why-your-business-needs-modern-website",
-    title: "Why Your Business Needs a Modern Website",
-    excerpt: "Discover how a well-designed website can transform your business and drive growth.",
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop",
-    category: "Business",
-    author: "Sarah Chen",
-    date: "Nov 10, 2024",
-    readTime: "4 min read",
-  },
-  {
-    id: "3",
-    slug: "mastering-responsive-design",
-    title: "Mastering Responsive Design: A Complete Guide",
-    excerpt: "Learn the principles and techniques for creating websites that work on any device.",
-    image: "https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=800&h=400&fit=crop",
-    category: "Design",
-    author: "Michael Davis",
-    date: "Nov 5, 2024",
-    readTime: "8 min read",
-  },
-  {
-    id: "4",
-    slug: "seo-best-practices-2024",
-    title: "SEO Best Practices for 2024",
-    excerpt: "Stay ahead of the curve with these proven SEO strategies for the new year.",
-    image: "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&h=400&fit=crop",
-    category: "Marketing",
-    author: "Emily Watson",
-    date: "Oct 28, 2024",
-    readTime: "6 min read",
-  },
-  {
-    id: "5",
-    slug: "building-scalable-web-applications",
-    title: "Building Scalable Web Applications",
-    excerpt: "Architecture patterns and best practices for applications that grow with your business.",
-    image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=400&fit=crop",
-    category: "Development",
-    author: "Alex Morgan",
-    date: "Oct 20, 2024",
-    readTime: "10 min read",
-  },
-  {
-    id: "6",
-    slug: "ecommerce-conversion-optimization",
-    title: "E-Commerce Conversion Optimization Tips",
-    excerpt: "Proven techniques to increase your online store's conversion rates.",
-    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop",
-    category: "E-Commerce",
-    author: "Sarah Chen",
-    date: "Oct 15, 2024",
-    readTime: "7 min read",
-  },
-];
+type BlogPost = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  featured_image: string | null;
+  category: string | null;
+  tags: string[] | null;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+  author?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
+
+const calculateReadTime = (content: string): string => {
+  const wordsPerMinute = 200;
+  const wordCount = content.split(/\s+/).length;
+  const minutes = Math.ceil(wordCount / wordsPerMinute);
+  return `${minutes} min read`;
+};
+
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return new Date().toLocaleDateString();
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
 
 export default function Blog() {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*, author:profiles!blog_posts_author_id_fkey(full_name, email)')
+        .eq('published', true)
+        .order('published_at', { ascending: false, nullsLast: true })
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPosts((data || []) as BlogPost[]);
+    } catch (error) {
+      console.error('Error loading blog posts:', error);
+      setPosts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const featuredPost = posts[0];
   const otherPosts = posts.slice(1);
 
@@ -98,46 +96,72 @@ export default function Blog() {
       </section>
 
       {/* Featured Post */}
-      <Section>
-        <div className="container mx-auto px-4">
-          <Link to={`/blog/${featuredPost.slug}`} className="group block">
-            <Card className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all">
+      {isLoading ? (
+        <Section>
+          <div className="container mx-auto px-4">
+            <Card className="overflow-hidden bg-card/50 backdrop-blur border-border/50">
               <div className="grid md:grid-cols-2 gap-0">
-                <div className="aspect-video md:aspect-auto overflow-hidden">
-                  <img
-                    src={featuredPost.image}
-                    alt={featuredPost.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-                <div className="p-8 flex flex-col justify-center">
-                  <Badge variant="secondary" className="w-fit mb-4">
-                    {featuredPost.category}
-                  </Badge>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-primary transition-colors">
-                    {featuredPost.title}
-                  </h2>
-                  <p className="text-muted-foreground mb-6">{featuredPost.excerpt}</p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <User className="w-4 h-4" />
-                      {featuredPost.author}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {featuredPost.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {featuredPost.readTime}
-                    </span>
-                  </div>
+                <Skeleton className="aspect-video md:aspect-auto w-full h-full" />
+                <div className="p-8 space-y-4">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
                 </div>
               </div>
             </Card>
-          </Link>
-        </div>
-      </Section>
+          </div>
+        </Section>
+      ) : featuredPost ? (
+        <Section>
+          <div className="container mx-auto px-4">
+            <Link to={`/blog/${featuredPost.slug}`} className="group block">
+              <Card className="overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all">
+                <div className="grid md:grid-cols-2 gap-0">
+                  <div className="aspect-video md:aspect-auto overflow-hidden bg-muted">
+                    {featuredPost.featured_image ? (
+                      <img
+                        src={featuredPost.featured_image}
+                        alt={featuredPost.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-8 flex flex-col justify-center">
+                    {featuredPost.category && (
+                      <Badge variant="secondary" className="w-fit mb-4">
+                        {featuredPost.category}
+                      </Badge>
+                    )}
+                    <h2 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-primary transition-colors">
+                      {featuredPost.title}
+                    </h2>
+                    <p className="text-muted-foreground mb-6">
+                      {featuredPost.excerpt || 'No excerpt available'}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {featuredPost.author?.full_name && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {featuredPost.author.full_name}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {formatDate(featuredPost.published_at || featuredPost.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          </div>
+        </Section>
+      ) : null}
 
       {/* Other Posts */}
       <Section variant="muted">
@@ -147,39 +171,68 @@ export default function Blog() {
             subtitle="Stay updated with our latest insights and tutorials."
           />
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {otherPosts.map((post) => (
-              <Link key={post.id} to={`/blog/${post.slug}`} className="group">
-                <Card className="h-full overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all">
-                  <div className="aspect-video overflow-hidden">
-                    <img
-                      src={post.image}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </div>
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="h-full overflow-hidden bg-card/50 backdrop-blur border-border/50">
+                  <Skeleton className="aspect-video w-full" />
                   <CardHeader>
-                    <Badge variant="secondary" className="w-fit mb-2">
-                      {post.category}
-                    </Badge>
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors line-clamp-2">
-                      {post.title}
-                    </CardTitle>
+                    <Skeleton className="h-5 w-20 mb-2" />
+                    <Skeleton className="h-6 w-full mb-2" />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                      {post.excerpt}
-                    </p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{post.date}</span>
-                      <span>·</span>
-                      <span>{post.readTime}</span>
-                    </div>
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4" />
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : otherPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">No blog posts available yet.</p>
+              <p className="text-muted-foreground text-sm mt-2">Check back soon for new articles!</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherPosts.map((post) => (
+                <Link key={post.id} to={`/blog/${post.slug}`} className="group">
+                  <Card className="h-full overflow-hidden bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all">
+                    <div className="aspect-video overflow-hidden bg-muted">
+                      {post.featured_image ? (
+                        <img
+                          src={post.featured_image}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                          No Image
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader>
+                      {post.category && (
+                        <Badge variant="secondary" className="w-fit mb-2">
+                          {post.category}
+                        </Badge>
+                      )}
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors line-clamp-2">
+                        {post.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                        {post.excerpt || 'No excerpt available'}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{formatDate(post.published_at || post.created_at)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
     </Layout>

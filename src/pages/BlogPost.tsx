@@ -1,95 +1,113 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Section } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, Clock, User, Share2, Twitter, Linkedin, Facebook } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const blogPostsData: Record<string, {
+type BlogPost = {
+  id: string;
+  slug: string;
   title: string;
-  excerpt: string;
+  excerpt: string | null;
   content: string;
-  author: { name: string; avatar: string; role: string };
-  date: string;
-  readTime: string;
-  category: string;
-  tags: string[];
-}> = {
-  "modern-web-development-2024": {
-    title: "Modern Web Development in 2024: Trends and Best Practices",
-    excerpt: "Explore the latest trends shaping web development and learn best practices for building modern applications.",
-    content: `
-# Modern Web Development in 2024
+  category: string | null;
+  tags: string[] | null;
+  featured_image: string | null;
+  published_at: string | null;
+  created_at: string;
+  author?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
 
-The web development landscape continues to evolve at a rapid pace. In this article, we'll explore the key trends and best practices that are shaping modern web development.
+const calculateReadTime = (content: string): string => {
+  const wordsPerMinute = 200;
+  const wordCount = content.split(/\s+/).length;
+  const minutes = Math.ceil(wordCount / wordsPerMinute);
+  return `${minutes} min read`;
+};
 
-## The Rise of Server Components
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return new Date().toLocaleDateString();
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+};
 
-React Server Components have revolutionized how we think about building React applications. By rendering components on the server, we can significantly reduce the JavaScript bundle size sent to the client.
-
-## Edge Computing
-
-Edge functions are becoming increasingly popular for handling API requests closer to users. This reduces latency and improves the overall user experience.
-
-## AI-Powered Development
-
-AI tools are becoming integral to the development workflow, from code completion to automated testing and bug detection.
-
-## Best Practices
-
-1. **Performance First**: Optimize for Core Web Vitals
-2. **Accessibility**: Build inclusive experiences for all users
-3. **Security**: Implement proper authentication and data protection
-4. **Testing**: Maintain comprehensive test coverage
-
-## Conclusion
-
-Staying current with web development trends is essential for building competitive applications. Focus on fundamentals while adopting new technologies thoughtfully.
-    `,
-    author: { name: "Alex Johnson", avatar: "AJ", role: "Lead Developer" },
-    date: "2024-01-15",
-    readTime: "8 min read",
-    category: "Development",
-    tags: ["React", "Web Development", "Trends", "Best Practices"]
-  },
-  "building-scalable-applications": {
-    title: "Building Scalable Applications: Architecture Patterns",
-    excerpt: "Learn essential architecture patterns for building applications that can scale with your business.",
-    content: `
-# Building Scalable Applications
-
-Scalability is crucial for any application expecting growth. Let's explore the architecture patterns that enable applications to handle increasing loads.
-
-## Microservices vs Monolith
-
-The choice between microservices and monolithic architecture depends on your team size, complexity, and scaling requirements.
-
-## Database Scaling Strategies
-
-- Read replicas for heavy read workloads
-- Sharding for horizontal scaling
-- Caching layers with Redis or Memcached
-
-## Message Queues
-
-Asynchronous processing with message queues like RabbitMQ or Apache Kafka can help manage peak loads.
-
-## Conclusion
-
-Building scalable applications requires careful planning and the right architecture choices from the start.
-    `,
-    author: { name: "Sarah Chen", avatar: "SC", role: "Solutions Architect" },
-    date: "2024-01-10",
-    readTime: "12 min read",
-    category: "Architecture",
-    tags: ["Scalability", "Architecture", "Microservices", "Database"]
-  }
+const getInitials = (name: string | null): string => {
+  if (!name) return "A";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 };
 
 export default function BlogPost() {
   const { slug } = useParams();
-  const post = blogPostsData[slug || ""];
+  const navigate = useNavigate();
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (slug) {
+      loadPost(slug);
+    }
+  }, [slug]);
+
+  const loadPost = async (postSlug: string) => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*, author:profiles!blog_posts_author_id_fkey(full_name, email)')
+        .eq('slug', postSlug)
+        .eq('published', true)
+        .single();
+
+      if (error) throw error;
+      setPost(data as BlogPost);
+    } catch (error: any) {
+      console.error('Error loading blog post:', error);
+      if (error.code === 'PGRST116') {
+        // Post not found
+        setPost(null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <Section className="pt-32">
+          <div className="container mx-auto px-4">
+            <Skeleton className="h-12 w-32 mb-8" />
+            <Skeleton className="h-16 w-full mb-6" />
+            <Skeleton className="h-6 w-64 mb-12" />
+            <div className="grid lg:grid-cols-[1fr_300px] gap-12">
+              <Skeleton className="h-96" />
+              <Skeleton className="h-64" />
+            </div>
+          </div>
+        </Section>
+      </Layout>
+    );
+  }
 
   if (!post) {
     return (
@@ -123,33 +141,34 @@ export default function BlogPost() {
           </Link>
           
           <div className="max-w-4xl">
-            <Badge variant="outline" className="mb-4">{post.category}</Badge>
+            {post.category && (
+              <Badge variant="outline" className="mb-4">{post.category}</Badge>
+            )}
             
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
               {post.title}
             </h1>
             
             <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                  {post.author.avatar}
+              {post.author && (
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                    {getInitials(post.author.full_name)}
+                  </div>
+                  <div>
+                    <div className="text-foreground font-medium">
+                      {post.author.full_name || 'Anonymous'}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-foreground font-medium">{post.author.name}</div>
-                  <div className="text-sm">{post.author.role}</div>
-                </div>
-              </div>
+              )}
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric"
-                })}
+                {formatDate(post.published_at || post.created_at)}
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                {post.readTime}
+                {calculateReadTime(post.content)}
               </div>
             </div>
           </div>
@@ -161,6 +180,13 @@ export default function BlogPost() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-[1fr_300px] gap-12">
             <article className="prose prose-invert prose-lg max-w-none">
+              {post.featured_image && (
+                <img
+                  src={post.featured_image}
+                  alt={post.title}
+                  className="w-full rounded-lg mb-8"
+                />
+              )}
               <div className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
                 {post.content}
               </div>
@@ -189,16 +215,18 @@ export default function BlogPost() {
               </Card>
               
               {/* Tags */}
-              <Card className="bg-card/50 backdrop-blur border-border/50">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-4">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {post.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">{tag}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              {post.tags && post.tags.length > 0 && (
+                <Card className="bg-card/50 backdrop-blur border-border/50">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-4">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {post.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">{tag}</Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </aside>
           </div>
         </div>

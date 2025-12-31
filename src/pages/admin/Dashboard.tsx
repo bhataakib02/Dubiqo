@@ -12,6 +12,7 @@ import {
   Ticket,
   TrendingUp,
   BarChart,
+  LogOut,
 } from 'lucide-react';
 
 type StatusLevel = 'healthy' | 'degraded' | 'down' | 'unknown';
@@ -218,6 +219,7 @@ export default function AdminDashboard() {
                 <Button variant="outline">Back to Site</Button>
               </Link>
               <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             </div>

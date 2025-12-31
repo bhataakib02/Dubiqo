@@ -1,220 +1,218 @@
 <div align="center">
 
-<img src="assets/Banner.png" alt="Dubiqo Banner" />
+<img src="assets/Banner.png" alt="Dubiqo Banner" width="100%" />
 
-# DUBIQO
+# 🚀 DUBIQO
 
-_Empowering Innovation, Accelerating Success Every Step_
+**Empowering Innovation, Accelerating Success Every Step**
 
-<img src="https://img.shields.io/github/last-commit/bhataakib02/Dubiqo?style=flat&logo=git&logoColor=white&color=4c4c4c" />
-<img src="https://img.shields.io/badge/TypeScript-97.4%25-3178C6?style=flat&logo=typescript&logoColor=white" />
-<img src="https://img.shields.io/badge/Languages-6-0A66C2?style=flat&logo=codefactor&logoColor=white" />
-<img src="https://img.shields.io/badge/Framework-React-61DAFB?style=flat&logo=react&logoColor=black" />
-<img src="https://img.shields.io/badge/Build-Vite-646CFF?style=flat&logo=vite&logoColor=white" />
-<img src="https://img.shields.io/badge/Platform-Web-22C55E?style=flat&logo=googlechrome&logoColor=white" />
-<img src="https://img.shields.io/badge/Status-Production%20Ready-16A34A?style=flat&logo=vercel&logoColor=white" />
+*We build websites that build your business.*
 
-<br/>
+[![Last Commit](https://img.shields.io/github/last-commit/bhataakib02/Dubiqo?style=flat&logo=git&logoColor=white&color=4c4c4c)](https://github.com/bhataakib02/Dubiqo)
+[![TypeScript](https://img.shields.io/badge/TypeScript-97.4%25-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/Framework-React-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Build-Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-16A34A?style=flat&logo=vercel&logoColor=white)](https://vercel.com/)
 
-### Built with the tools and technologies
+### 🛠️ Built With
 
 <img src="https://skillicons.dev/icons?i=markdown,npm,js,ts,react,vite,css,docker,githubactions,vitest,nodejs,postgres,git&theme=light" />
-<img src="https://img.shields.io/badge/PostCSS-DD3A0A?style=flat&logo=postcss&logoColor=white" />
-<img src="https://img.shields.io/badge/Autoprefixer-DD3735?style=flat&logo=autoprefixer&logoColor=white" />
-<img src="https://img.shields.io/badge/React_Hook_Form-EC5990?style=flat&logo=react-hook-form&logoColor=white" />
+
+[![PostCSS](https://img.shields.io/badge/PostCSS-DD3A0A?style=flat&logo=postcss&logoColor=white)](https://postcss.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
 
 </div>
 
-# Dubiqo Digital Solutions - Enterprise Platform
+---
 
-**Tagline:** "We build websites that build your business."
+## 📋 Table of Contents
 
-Complete, production-ready, enterprise-grade platform built with React + Vite + TypeScript + Tailwind CSS + Supabase.
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Quick Start](#-quick-start)
+- [Project Structure](#-project-structure)
+- [Authentication & Authorization](#-authentication--authorization)
+- [Database Schema](#-database-schema)
+- [Deployment](#-deployment)
+- [Security](#-security)
+- [Admin Portal](#-admin-portal)
+- [Contributing](#-contributing)
+- [Support](#-support)
 
-## 🚀 Features
+---
 
-# Dubiqo Digital Solutions - Enterprise Platform
+## 🎯 Overview
 
-**Tagline:** "We build websites that build your business."
+**Dubiqo** is a complete, production-ready, enterprise-grade digital solutions platform built with modern web technologies. It provides a comprehensive system for managing client projects, quotes, bookings, invoices, support tickets, and content management.
 
-Complete, production-ready, enterprise-grade platform built with React + Vite + TypeScript + Tailwind CSS + Supabase.
+### Key Highlights
 
-## 🚀 Features
+- ✅ **Production Ready** - Fully functional enterprise platform
+- ✅ **Type-Safe** - Built with TypeScript for reliability
+- ✅ **Modern Stack** - React 18, Vite, Tailwind CSS, Supabase
+- ✅ **Secure** - Row-Level Security (RLS) and RBAC
+- ✅ **Scalable** - Serverless architecture with Edge Functions
+- ✅ **SEO Optimized** - Built for search engine visibility
+- ✅ **Responsive** - Mobile-first design approach
+
+---
+
+## ✨ Features
+
+### 🌐 Public-Facing Pages
+
+| Feature | Description |
+|---------|-------------|
+| **Landing Page** | Modern, conversion-optimized homepage |
+| **Services** | Detailed service pages (Websites, Portfolios, Billing Systems, Dashboards, Troubleshooting, Maintenance) |
+| **Portfolio** | Showcase of completed projects |
+| **Case Studies** | In-depth project success stories |
+| **Pricing** | Dynamic pricing plans management |
+| **Blog** | Content management system for articles |
+| **About** | Company information and team |
+| **Contact** | Multiple contact methods and forms |
+| **Quote Calculator** | Interactive quote estimation tool |
+| **Booking System** | Consultation scheduling |
+| **Downloads** | Resource library |
+| **Legal Pages** | Privacy Policy, Terms, Refund Policy, SLA |
+
+### 🔐 Authentication System
+
+- **Unified Login** - Single sign-in for all user types
+- **Auto-Redirect** - Intelligent routing based on user role
+  - `admin`/`staff` → `/admin/dashboard`
+  - `client` → `/client-portal`
+- **OAuth Support** - Google and GitHub authentication
+- **Email Verification** - Configurable email confirmation
+- **Session Management** - Secure session handling via Supabase
+
+### 👥 Role-Based Access Control (RBAC)
+
+#### Client (Default Role)
+- View own projects, quotes, and invoices
+- Create and track support tickets
+- Access client portal dashboard
+- View project status and updates
+
+#### Staff
+- View all client data
+- Manage projects, quotes, and bookings
+- Respond to support tickets
+- Access admin portal features
+- Limited to assigned clients (data isolation)
+
+#### Admin
+- Full system access
+- User and role management
+- System configuration
+- Audit log access
+- Complete analytics dashboard
+
+### 🎨 Admin Portal Features
+
+> **Note:** Admin portal is hidden from public navigation and search engines
+
+- **Dashboard** - Real-time statistics and overview
+- **User Management** - Complete user administration
+- **Project Management** - Track and manage all projects
+- **Quote Management** - Handle quote requests
+- **Booking Management** - Consultation scheduling
+- **Invoice Management** - Billing and payment tracking
+- **Ticket System** - Customer support management
+- **Content Management** - Blog posts and case studies
+- **Pricing Management** - Dynamic pricing plans
+- **Analytics** - Usage and performance metrics
+- **Audit Logs** - Security and activity tracking
+
+### 🗄️ Database Features
+
+- **PostgreSQL** - Robust relational database
+- **Row-Level Security (RLS)** - Table-level access control
+- **Real-time Subscriptions** - Live data updates
+- **Edge Functions** - Serverless backend logic
+- **File Storage** - Secure file management
+- **Full-Text Search** - Advanced search capabilities
+
+---
+
+## 🛠️ Tech Stack
 
 ### Frontend
 
-- ✅ Modern React 18 + Vite + TypeScript
-- ✅ Tailwind CSS with custom design system
-- ✅ Shadcn UI components
-- ✅ Responsive design throughout
-- ✅ SEO optimized
-- ✅ PWA support ready
+| Technology | Purpose |
+|-----------|---------|
+| **React 18** | UI framework with latest features |
+| **TypeScript** | Type-safe development |
+| **Vite** | Lightning-fast build tool |
+| **Tailwind CSS** | Utility-first CSS framework |
+| **Shadcn UI** | High-quality component library |
+| **React Router v6** | Client-side routing |
+| **React Hook Form** | Form state management |
+| **Zod** | Schema validation |
+| **Sonner** | Toast notifications |
 
 ### Backend (Supabase)
 
-- ✅ Authentication (Email/Password, OAuth - Google/GitHub)
-- ✅ PostgreSQL database with RLS policies
-- ✅ File storage
-- ✅ Edge Functions (serverless)
-- ✅ Real-time subscriptions
-- ✅ Role-Based Access Control (RBAC)
+| Service | Purpose |
+|---------|---------|
+| **Supabase Auth** | Authentication & authorization |
+| **PostgreSQL** | Primary database |
+| **Row-Level Security** | Data access control |
+| **Storage** | File uploads and management |
+| **Edge Functions** | Serverless functions |
+| **Realtime** | Live data subscriptions |
+| **PostgREST** | Auto-generated REST API |
 
-### Public Pages
+### Development Tools
 
-- Home / Landing
-- Services (Websites, Portfolios, Billing Systems, Dashboards, Troubleshooting, Maintenance)
-- Portfolio & Case Studies
-- Pricing
-- About
-- Blog
-- Contact & Support
-- FAQ
-- Quote Calculator
-- Booking System
-- Downloads
-- Legal (Privacy, Terms, Refund, SLA)
+- **Vitest** - Unit testing framework
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **GitHub Actions** - CI/CD pipeline
+- **Docker** - Containerization support
 
-### Authentication System
+---
 
-- Unified login (no role selection)
-- Auto-redirect based on user role:
-  - `admin`/`staff` → `/admin/dashboard`
-  - `client` → `/client-portal`
-- OAuth support (Google, GitHub)
-- Email auto-confirm enabled for development
-
-### Hidden Admin Portal
-
-**Path:** `/admin/*` (NO public links anywhere)
-
-- Blocked in robots.txt
-- Protected by RLS policies
-- Requires admin/staff role
-- Features:
-  - Dashboard with statistics
-  - User management
-  - Project management
-  - Quote management
-  - Booking management
-  - Invoice management
-  - Ticket system
-  - Audit logs
-  - Analytics
-
-### Database Schema
-
-Comprehensive schema with:
-
-- `profiles` - User profiles
-- `user_roles` - RBAC (admin, staff, client)
-- `projects` - Client projects
-- `quotes` - Quote requests
-- `bookings` - Consultation bookings
-- `invoices` & `payments` - Billing
-- `tickets` & `ticket_messages` - Support system
-- `blog_posts` - Content management
-- `case_studies` - Portfolio
-- `downloads` - File management
-- `audit_logs` - Security tracking
-- `telemetry_events` - Analytics
-- `feature_flags` - Feature toggles
-- `consent_logs` - GDPR compliance
-
-## 🛠️ Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **npm** or **yarn** package manager
+- **Supabase Account** ([Sign up](https://supabase.com/))
 
 ### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/bhataakib02/Dubiqo.git
+cd Dubiqo
+
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
+# Set up environment variables
+cp .env.example .env
 ```
 
-### Environment Setup
+### Environment Configuration
 
-Configure your Supabase project:
+Create a `.env` file in the root directory:
 
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon/public key
-- `VITE_SUPABASE_PROJECT_ID` - Your Supabase project ID
-
-Create a `.env` file with these variables.
-
-### First Run
-
-1. The app will run on `http://localhost:5173`
-2. Sign up to create your first account (becomes a client by default)
-3. To create an admin user, manually update the `user_roles` table in Supabase
-
-## 🔐 Security
-
-### Authentication
-
-- Email/password with secure hashing
-- OAuth providers (Google, GitHub)
-- Session management with Supabase
-- Auto-redirect based on role
-
-### Authorization (RLS)
-
-- Row Level Security on all tables
-- Role-based policies (admin, staff, client)
-- Clients can only see their own data
-- Staff/Admin have appropriate elevated access
-- Public content (blog, case studies) accessible to all when published
-
-### Admin Access
-
-- Hidden admin portal (no public links)
-- Blocked from search engines (robots.txt)
-- Protected routes with role checking
-- Audit logging for all admin actions
-
-## 📁 Project Structure
-
-```
-src/
-├── components/
-│   ├── layout/              # Layout components
-│   ├── ui/                  # Shadcn UI components
-│   ├── ChatWidget.tsx       # Support chat
-│   └── ProtectedRoute.tsx   # Auth wrapper
-├── pages/
-│   ├── admin/               # Hidden admin portal
-│   ├── services/            # Service pages
-│   ├── legal/               # Legal pages
-│   └── ...                  # Public pages
-├── integrations/
-│   └── supabase/            # Supabase client
-├── utils/
-│   └── emailService.ts      # EmailJS integration
-└── hooks/                   # Custom React hooks
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+VITE_SUPABASE_PROJECT_ID=your_supabase_project_id
 ```
 
-## 🔧 Key Technologies
-
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS
-- **UI:** Shadcn UI, Lucide Icons
-- **Routing:** React Router v6
-- **Backend:** Supabase
-- **Auth:** Supabase Auth
-- **Database:** PostgreSQL with RLS
-- **Storage:** Supabase Storage
-- **Functions:** Edge Functions (TypeScript)
-- **Email:** EmailJS (optional integration)
-
-## 🚢 Deployment
-
-### Frontend
+### Running the Application
 
 ```bash
+# Start development server
+npm run dev
+
 # Build for production
 npm run build
 
@@ -222,120 +220,409 @@ npm run build
 npm run preview
 ```
 
-Deploy to:
+The application will be available at `http://localhost:5173`
 
-- Vercel (recommended)
-- Netlify
-- Any static hosting
+### First-Time Setup
 
-### Backend
+1. **Create Supabase Project**
+   - Sign up at [supabase.com](https://supabase.com)
+   - Create a new project
+   - Copy your project URL and API keys
 
-Deploy to Supabase:
+2. **Run Database Migrations**
+   ```bash
+   # Using Supabase CLI
+   supabase db push
+   
+   # Or manually via Supabase Dashboard
+   # Navigate to SQL Editor and run migrations from:
+   # supabase/migrations/
+   ```
 
-- Database migrations (via Supabase CLI or Dashboard)
-- Edge Functions (via Supabase CLI)
-- Storage buckets (via Supabase Dashboard)
-- RLS policies (via migrations)
+3. **Create Admin User**
+   - Sign up through the application (creates a client by default)
+   - In Supabase Dashboard, go to `user_roles` table
+   - Insert a new row:
+     ```sql
+     INSERT INTO user_roles (user_id, role)
+     VALUES ('your-user-id', 'admin');
+     ```
 
-## 📊 Admin Features
-
-### Dashboard
-
-- User statistics
-- Project overview
-- Quote requests
-- Booking calendar
-- Invoice tracking
-- Ticket status
-- Real-time updates
-
-### User Management
-
-- View all users
-- Manage roles
-- Activity tracking
-- Profile management
-
-### Project Management
-
-- All client projects
-- Status tracking
-- Assignment
-- Timeline view
-
-### Analytics
-
-- Usage statistics
-- Performance metrics
-- User behavior
-- Revenue tracking
-
-## 🔒 RBAC System
-
-### Roles
-
-1. **client** (default)
-   - Own data access only
-   - View own projects, quotes, invoices
-   - Create tickets
-   - Access client portal
-
-2. **staff**
-   - View all data
-   - Manage projects, quotes, bookings
-   - Respond to tickets
-   - Access admin portal
-
-3. **admin**
-   - Full system access
-   - User management
-   - Role assignment
-   - System configuration
-   - Audit log access
-
-## 📝 Important Notes
-
-### Careers Module
-
-**REMOVED ENTIRELY** as per requirements. No career pages, application system, or related functionality.
-
-### Hidden Admin Portal
-
-- Never appears in public navigation
-- Not linked from any public page
-- Blocked in robots.txt
-- Meta tags: `noindex, nofollow`
-- Access only via direct URL for authenticated admin/staff
-
-### Auto-Confirm Email
-
-Enabled for development. In production, disable and configure proper email service.
-
-### Sample Data
-
-Includes seed data for:
-
-- Blog posts (5)
-- Case studies (3)
-- Downloads (3)
-- Feature flags
-
-## 🤝 Contributing
-
-This is a private project for Dubiqo Digital Solutions.
-
-## 📄 License
-
-Private & Proprietary - Dubiqo Digital Solutions
-
-## 🆘 Support
-
-For internal support:
-
-- Check documentation in `/docs`
-- Review backend in Supabase Dashboard
-- Check audit logs for admin actions
+4. **Configure OAuth (Optional)**
+   - In Supabase Dashboard → Authentication → Providers
+   - Enable Google/GitHub OAuth
+   - Add redirect URLs
 
 ---
 
+## 📁 Project Structure
+
+```
+Dubiqo/
+├── src/
+│   ├── components/
+│   │   ├── layout/              # Layout components (Header, Footer, etc.)
+│   │   ├── ui/                  # Shadcn UI components
+│   │   ├── ChatWidget.tsx       # Support chat widget
+│   │   └── ProtectedRoute.tsx   # Authentication wrapper
+│   │
+│   ├── pages/
+│   │   ├── admin/               # Admin portal (hidden)
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Users.tsx
+│   │   │   ├── Projects.tsx
+│   │   │   ├── Quotes.tsx
+│   │   │   ├── Bookings.tsx
+│   │   │   ├── Invoices.tsx
+│   │   │   ├── Tickets.tsx
+│   │   │   ├── BlogsAdmin.tsx
+│   │   │   ├── CaseStudiesAdmin.tsx
+│   │   │   ├── PricingAdmin.tsx
+│   │   │   └── Downloads.tsx
+│   │   │
+│   │   ├── services/            # Service detail pages
+│   │   ├── legal/               # Legal pages (Privacy, Terms, etc.)
+│   │   ├── Index.tsx            # Landing page
+│   │   ├── Blog.tsx             # Blog listing
+│   │   ├── BlogPost.tsx         # Blog detail
+│   │   ├── CaseStudies.tsx       # Case studies listing
+│   │   ├── CaseStudyDetail.tsx   # Case study detail
+│   │   ├── Pricing.tsx           # Pricing page
+│   │   ├── Contact.tsx          # Contact page
+│   │   ├── ClientPortal.tsx      # Client dashboard
+│   │   └── StaffDashboard.tsx   # Staff dashboard
+│   │
+│   ├── integrations/
+│   │   └── supabase/
+│   │       ├── client.ts        # Supabase client setup
+│   │       └── types.ts         # Generated TypeScript types
+│   │
+│   ├── hooks/                   # Custom React hooks
+│   ├── utils/                   # Utility functions
+│   │   └── emailService.ts      # EmailJS integration
+│   │
+│   └── App.tsx                   # Main application component
+│
+├── supabase/
+│   ├── migrations/              # Database migrations
+│   ├── functions/               # Edge Functions
+│   └── seeds/                   # Seed data
+│
+├── public/                       # Static assets
+├── assets/                       # Images and media
+└── README.md                     # This file
+```
+
+---
+
+## 🔐 Authentication & Authorization
+
+### Authentication Flow
+
+1. User signs up/signs in via unified login page
+2. Supabase handles authentication
+3. Application checks user role from `user_roles` table
+4. Auto-redirect based on role:
+   - **Admin/Staff** → `/admin/dashboard`
+   - **Client** → `/client-portal`
+
+### Authorization (RLS Policies)
+
+All database tables use **Row-Level Security** with role-based policies:
+
+- **Public Access**: Blog posts, case studies (when published)
+- **Client Access**: Own data only (projects, quotes, invoices, tickets)
+- **Staff Access**: All client data (filtered by assignments)
+- **Admin Access**: Full system access
+
+### Protected Routes
+
+```typescript
+// Example: Admin-only route
+<Route
+  path="/admin/dashboard"
+  element={
+    <ProtectedRoute requiredRole={['admin']}>
+      <AdminDashboard />
+    </ProtectedRoute>
+  }
+/>
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Core Tables
+
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User profile information |
+| `user_roles` | Role-based access control (admin, staff, client) |
+| `projects` | Client project management |
+| `quotes` | Quote requests and estimates |
+| `bookings` | Consultation bookings |
+| `invoices` | Billing and invoicing |
+| `payments` | Payment tracking |
+| `tickets` | Support ticket system |
+| `ticket_messages` | Ticket conversations |
+| `blog_posts` | Blog content management |
+| `case_studies` | Portfolio case studies |
+| `pricing_plans` | Dynamic pricing plans |
+| `downloads` | File downloads |
+| `audit_logs` | Security and activity logs |
+| `telemetry_events` | Analytics events |
+| `feature_flags` | Feature toggle system |
+| `consent_logs` | GDPR compliance tracking |
+
+### Relationships
+
+- Users → Projects (one-to-many)
+- Users → Quotes (one-to-many)
+- Users → Invoices (one-to-many)
+- Users → Tickets (one-to-many)
+- Projects → Invoices (one-to-many)
+- Tickets → Messages (one-to-many)
+
+---
+
+## 🚢 Deployment
+
+### Frontend Deployment
+
+#### Vercel (Recommended)
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+
+# Or connect via GitHub for automatic deployments
+```
+
+#### Netlify
+
+```bash
+# Install Netlify CLI
+npm i -g netlify-cli
+
+# Deploy
+netlify deploy --prod
+```
+
+#### Manual Build
+
+```bash
+# Build production bundle
+npm run build
+
+# Output will be in 'dist/' directory
+# Upload to any static hosting service
+```
+
+### Backend Deployment (Supabase)
+
+1. **Database Migrations**
+   ```bash
+   # Using Supabase CLI
+   supabase db push
+   
+   # Or via Dashboard → SQL Editor
+   ```
+
+2. **Edge Functions**
+   ```bash
+   # Deploy functions
+   supabase functions deploy function-name
+   ```
+
+3. **Storage Buckets**
+   - Configure via Supabase Dashboard
+   - Set up RLS policies for buckets
+
+4. **Environment Variables**
+   - Set production environment variables
+   - Update CORS settings
+   - Configure redirect URLs
+
+### Production Checklist
+
+- [ ] Update environment variables
+- [ ] Run all database migrations
+- [ ] Configure email service (disable auto-confirm)
+- [ ] Set up OAuth providers
+- [ ] Configure CORS settings
+- [ ] Set up error monitoring
+- [ ] Configure analytics
+- [ ] Test all authentication flows
+- [ ] Verify RLS policies
+- [ ] Set up backup strategy
+
+---
+
+## 🔒 Security
+
+### Authentication Security
+
+- ✅ Secure password hashing (bcrypt via Supabase)
+- ✅ JWT token-based sessions
+- ✅ OAuth 2.0 for third-party providers
+- ✅ Email verification (configurable)
+- ✅ Session timeout handling
+
+### Authorization Security
+
+- ✅ Row-Level Security (RLS) on all tables
+- ✅ Role-based access control (RBAC)
+- ✅ Protected routes with role checking
+- ✅ Client data isolation
+- ✅ Staff data filtering by assignments
+
+### Admin Portal Security
+
+- ✅ Hidden from public navigation
+- ✅ Blocked in `robots.txt`
+- ✅ Meta tags: `noindex, nofollow`
+- ✅ Protected by authentication
+- ✅ Role-based access enforcement
+- ✅ Audit logging for all actions
+
+### Data Security
+
+- ✅ Encrypted database connections
+- ✅ Secure file storage
+- ✅ Input validation and sanitization
+- ✅ SQL injection prevention (via Supabase)
+- ✅ XSS protection
+- ✅ CSRF protection
+
+---
+
+## 👨‍💼 Admin Portal
+
+### Access
+
+The admin portal is **completely hidden** from public access:
+
+- ❌ No links in navigation
+- ❌ Not in sitemap
+- ❌ Blocked in robots.txt
+- ❌ Requires direct URL + authentication
+- ✅ Only accessible at `/admin/*` paths
+
+### Features
+
+#### Dashboard
+- Real-time statistics
+- Project overview
+- Quote requests summary
+- Booking calendar
+- Invoice tracking
+- Ticket status overview
+
+#### User Management
+- View all users
+- Manage user roles
+- Activity tracking
+- Profile management
+
+#### Content Management
+- Blog posts (create, edit, publish)
+- Case studies (create, edit, publish)
+- Pricing plans (dynamic management)
+- Downloads (file management)
+
+#### Business Management
+- Project tracking and assignment
+- Quote management
+- Booking scheduling
+- Invoice and payment tracking
+- Support ticket system
+
+#### Analytics & Logs
+- Usage statistics
+- Performance metrics
+- Audit logs
+- User activity tracking
+
+---
+
+## 📝 Important Notes
+
+### Removed Features
+
+- ❌ **Careers Module** - Completely removed as per requirements
+- ❌ No job listings, applications, or related functionality
+
+### Development vs Production
+
+| Feature | Development | Production |
+|---------|-------------|------------|
+| Email Confirmation | Auto-confirm enabled | Manual confirmation required |
+| Error Messages | Detailed | Generic (security) |
+| Logging | Verbose | Essential only |
+| CORS | Permissive | Restricted |
+
+### Sample Data
+
+The project includes seed data for:
+- Blog posts (sample articles)
+- Case studies (example projects)
+- Downloads (sample resources)
+- Feature flags (default configuration)
+
+---
+
+## 🤝 Contributing
+
+This is a **private project** for Dubiqo Digital Solutions.
+
+For internal contributors:
+
+1. Create a feature branch
+2. Make your changes
+3. Test thoroughly
+4. Submit a pull request
+5. Code review required before merge
+
+---
+
+## 📄 License
+
+**Private & Proprietary** - Dubiqo Digital Solutions
+
+All rights reserved. This software and associated documentation files are proprietary and confidential.
+
+---
+
+## 🆘 Support
+
+### Internal Support
+
+- 📚 Check documentation in `/docs` directory
+- 🔍 Review backend in Supabase Dashboard
+- 📊 Check audit logs for admin actions
+- 🐛 Review error logs in Supabase Dashboard
+
+### Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [React Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+
+---
+
+<div align="center">
+
 **Built with ❤️ by Dubiqo Digital Solutions**
+
+[Website](https://dubiqo.com) • [Documentation](#) • [Support](#)
+
+---
+
+⭐ **Star this repo if you find it helpful!**
+
+</div>

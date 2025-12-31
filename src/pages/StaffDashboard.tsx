@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Ticket, FolderKanban, FileText, Users, Clock, Search as SearchIcon } from 'lucide-react';
+import { BarChart, Ticket, FolderKanban, FileText, Users, Clock, Search as SearchIcon, RefreshCw, LogOut } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
 export default function StaffDashboard() {
+  const navigate = useNavigate();
   const [assignedTickets, setAssignedTickets] = useState<number | null>(null);
   const [openProjects, setOpenProjects] = useState<number | null>(null);
   const [pendingQuotes, setPendingQuotes] = useState<number | null>(null);
   const [recentClients, setRecentClients] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchValue, setSearchValue] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadStaffStats();
@@ -25,6 +27,7 @@ export default function StaffDashboard() {
   const loadStaffStats = async () => {
     if (!supabase) return;
 
+    setIsRefreshing(true);
     try {
       const {
         data: { user },
@@ -95,6 +98,23 @@ export default function StaffDashboard() {
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading staff dashboard stats:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadStaffStats();
+  };
+
+  const handleLogout = async () => {
+    if (!supabase) return;
+    try {
+      await supabase.auth.signOut();
+      navigate('/auth');
+    } catch (err) {
+      console.error('Logout error', err);
+      navigate('/auth');
     }
   };
 
@@ -110,11 +130,20 @@ export default function StaffDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Link to="/admin/dashboard">
-                <Button variant="outline" size="sm">
-                  Switch to Admin View
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
           <div className="flex flex-col md:flex-row md:items-center gap-2 mt-4">
@@ -225,7 +254,7 @@ export default function StaffDashboard() {
                     <p className="text-4xl font-bold tracking-tight mb-1">
                       {openProjects === null ? <Skeleton className="h-7 w-16" /> : openProjects}
                     </p>
-                    <span className="text-[12px] text-muted-foreground">Active projects you’re involved in</span>
+                    <span className="text-[12px] text-muted-foreground">Active projects you're involved in</span>
                   </CardContent>
                 </Card>
               </Link>

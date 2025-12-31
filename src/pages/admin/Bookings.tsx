@@ -38,12 +38,67 @@ export default function AdminBookings() {
   const [viewingBooking, setViewingBooking] = useState<BookingWithClient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [staffOnlyView, setStaffOnlyView] = useState(false);
+  const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    loadBookings();
+    initializeBookings();
   }, []);
+
+  const initializeBookings = async () => {
+    if (!supabase) {
+      await loadBookings();
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        await loadBookings();
+        return;
+      }
+
+      setCurrentUserId(user.id);
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      const isAdmin = roles?.some((r) => r.role === 'admin');
+      const isStaff = roles?.some((r) => r.role === 'staff');
+      const staffOnly = !!isStaff && !isAdmin;
+      setStaffOnlyView(staffOnly);
+
+      if (staffOnly) {
+        const { data: myTickets, error } = await supabase
+          .from('tickets')
+          .select('client_id')
+          .eq('assigned_to', user.id);
+
+        if (error) {
+          console.error('Error loading staff booking tickets:', error);
+        } else {
+          const ids = new Set<string>();
+          (myTickets || []).forEach((t: any) => {
+            if (t.client_id) ids.add(t.client_id);
+          });
+          setMyClientIds(ids);
+        }
+      }
+
+      await loadBookings();
+    } catch (error) {
+      console.error('Error initializing bookings view:', error);
+      await loadBookings();
+    }
+  };
 
   const loadBookings = async () => {
     if (!supabase) return;
@@ -57,7 +112,20 @@ export default function AdminBookings() {
         .order('time_slot', { ascending: true });
 
       if (error) throw error;
-      setBookings(data || []);
+
+      let result = data || [];
+      if (staffOnlyView && myClientIds.size > 0) {
+        // Only bookings whose client is both in myClientIds and the client has the role 'client'
+        const clientRoleMap = new Map<string, string>();
+        try {
+          const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+          (roles || []).forEach((r: any) => {
+            if (r.role === 'client') clientRoleMap.set(r.user_id, 'client');
+          });
+        } catch {}
+        result = result.filter((b: any) => b.client_id && myClientIds.has(b.client_id) && clientRoleMap.has(b.client_id));
+      }
+      setBookings(result);
     } catch (error) {
       console.error('Error loading bookings:', error);
       toast.error('Failed to load bookings');
