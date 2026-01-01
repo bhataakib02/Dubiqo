@@ -1,12 +1,28 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { Section, SectionHeader } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Check, Globe, Code2, BarChart3, ShoppingCart, Wrench, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowRight, Check, Globe, Code2, BarChart3, ShoppingCart, Wrench, Shield, Layers, LineChart, Briefcase, Headphones } from "lucide-react";
 
-const servicesData: Record<string, {
+// Icon mapping
+const iconMap: Record<string, any> = {
+  Globe,
+  Layers,
+  LineChart,
+  ShoppingCart,
+  Briefcase,
+  Wrench,
+  Headphones,
+  Code2,
+  BarChart3,
+};
+
+// Fallback data (used if database fetch fails)
+const fallbackServicesData: Record<string, {
   title: string;
   description: string;
   icon: any;
@@ -187,7 +203,86 @@ const servicesData: Record<string, {
 
 export default function ServiceDetail() {
   const { slug } = useParams();
-  const service = servicesData[slug || ""];
+  const navigate = useNavigate();
+  const [service, setService] = useState<{
+    title: string;
+    description: string;
+    icon: any;
+    features: string[];
+    benefits: string[];
+    process: { step: string; title: string; description: string }[];
+    pricing: { from: string; note: string };
+  } | null>(null);
+  const [serviceImage, setServiceImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (slug) {
+      loadService(slug);
+    }
+  }, [slug]);
+
+  const loadService = async (serviceSlug: string) => {
+    if (!supabase) {
+      setIsLoading(false);
+      // Use fallback data
+      const fallback = fallbackServicesData[serviceSlug];
+      if (fallback) {
+        setService(fallback);
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('slug', serviceSlug)
+        .eq('published', true)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setService({
+          title: data.title,
+          description: data.description,
+          icon: iconMap[data.icon_name || 'Globe'] || Globe,
+          features: data.features || [],
+          benefits: data.benefits || [],
+          process: (data.process_steps as any) || [],
+          pricing: {
+            from: data.pricing_text || 'Contact us',
+            note: data.pricing_amount ? `Starting from ₹${data.pricing_amount.toLocaleString('en-IN')}` : '',
+          },
+        });
+        setServiceImage(data.image_url || null);
+      }
+    } catch (error) {
+      console.error('Error loading service:', error);
+      // Use fallback data if available
+      const fallback = fallbackServicesData[serviceSlug];
+      if (fallback) {
+        setService(fallback);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <Section className="pt-32">
+          <div className="container mx-auto px-4 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading service...</p>
+          </div>
+        </Section>
+      </Layout>
+    );
+  }
 
   if (!service) {
     return (

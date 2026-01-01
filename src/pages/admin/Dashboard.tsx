@@ -410,6 +410,7 @@ export default function AdminDashboard() {
               { to: '/admin/blogs', label: 'Manage Blog Posts', icon: FileText, color: 'from-pink-500/20 to-pink-600/20', iconColor: 'text-pink-500', borderColor: 'border-pink-500/30' },
               { to: '/admin/pricing', label: 'Manage Pricing', icon: DollarSign, color: 'from-yellow-500/20 to-yellow-600/20', iconColor: 'text-yellow-500', borderColor: 'border-yellow-500/30' },
               { to: '/admin/testimonials', label: 'Manage Testimonials', icon: Star, color: 'from-amber-500/20 to-amber-600/20', iconColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
+              { to: '/admin/services', label: 'Manage Services', icon: FolderKanban, color: 'from-cyan-500/20 to-cyan-600/20', iconColor: 'text-cyan-500', borderColor: 'border-cyan-500/30' },
             ].map((action) => {
               const Icon = action.icon;
               return (

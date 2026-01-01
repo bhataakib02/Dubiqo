@@ -55,6 +55,8 @@ import AdminCaseStudies from './pages/admin/CaseStudiesAdmin';
 import AdminBlogs from './pages/admin/BlogsAdmin';
 import AdminPricing from './pages/admin/PricingAdmin';
 import AdminTestimonials from './pages/admin/TestimonialsAdmin';
+import AdminServiceImages from './pages/admin/ServiceImages';
+import AdminServices from './pages/admin/ServicesAdmin';
 
 const queryClient = new QueryClient();
 
@@ -63,7 +65,12 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
           {/* Marketing Pages */}
           <Route path="/" element={<Index />} />
@@ -188,6 +195,22 @@ const App = () => (
             element={
               <ProtectedRoute requiredRole={['admin', 'staff']}>
                 <AdminTestimonials />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/service-images"
+            element={
+              <ProtectedRoute requiredRole={['admin', 'staff']}>
+                <AdminServices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/services"
+            element={
+              <ProtectedRoute requiredRole={['admin', 'staff']}>
+                <AdminServices />
               </ProtectedRoute>
             }
           />
