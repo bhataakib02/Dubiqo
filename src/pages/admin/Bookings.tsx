@@ -66,6 +66,7 @@ export default function AdminBookings() {
     notes: '',
     status: '',
     assigned_to: '',
+    clientNotes: '', // Client notes (read-only for admin)
   });
   const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string | null; email: string; role?: string }>>([]);
 
@@ -372,13 +373,15 @@ export default function AdminBookings() {
 
   const handleEdit = (booking: BookingWithClient) => {
     setEditingBooking(booking);
+    const metadata = booking.metadata as any;
     setEditFormData({
       booking_type: booking.booking_type || '',
       scheduled_at: booking.scheduled_at || new Date().toISOString(),
       duration_minutes: booking.duration_minutes?.toString() || '',
-      notes: booking.notes || '',
+      notes: booking.notes || '', // Admin/staff internal notes
       status: booking.status || 'pending',
       assigned_to: (booking as any).assigned_to || '',
+      clientNotes: metadata?.clientNotes || '', // Client's original notes from booking
     });
     // Ensure staff members are loaded when opening edit dialog
     if (staffMembers.length === 0) {
@@ -432,7 +435,7 @@ export default function AdminBookings() {
       const updateData: any = {
         booking_type: editFormData.booking_type,
         scheduled_at: parsedDate.toISOString(),
-        status: editFormData.status,
+        status: editFormData.status || 'pending', // Default to pending if not set
         notes: editFormData.notes || null,
         assigned_to: editFormData.assigned_to || null,
       };
@@ -687,18 +690,6 @@ export default function AdminBookings() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {booking.assigned_staff ? (
-                              <div>
-                                <p className="font-medium">{booking.assigned_staff.full_name || booking.assigned_staff.email}</p>
-                                {booking.assigned_staff.metadata && (booking.assigned_staff.metadata as any)?.role && (
-                                  <p className="text-xs text-muted-foreground">{(booking.assigned_staff.metadata as any).role}</p>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">Unassigned</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
                             <Select
                               value={booking.status}
                               onValueChange={(value) => updateBookingStatus(booking.id, value)}
@@ -717,8 +708,22 @@ export default function AdminBookings() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {booking.notes || '-'}
+                          <TableCell className="max-w-xs">
+                            <div className="space-y-1">
+                              {(booking.metadata as any)?.clientNotes && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  Client: {(booking.metadata as any).clientNotes}
+                                </p>
+                              )}
+                              {booking.notes && (
+                                <p className="text-xs truncate font-medium">
+                                  Internal: {booking.notes}
+                                </p>
+                              )}
+                              {!booking.notes && !(booking.metadata as any)?.clientNotes && (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
@@ -762,7 +767,7 @@ export default function AdminBookings() {
       </main>
       {/* View Booking Dialog */}
       <Dialog open={!!viewingBooking} onOpenChange={() => setViewingBooking(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
           </DialogHeader>
@@ -812,8 +817,14 @@ export default function AdminBookings() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Notes</p>
-                  <p className="font-medium">{viewingBooking.notes || '-'}</p>
+                  <p className="text-sm text-muted-foreground">Client Notes</p>
+                  <p className="font-medium text-sm mb-2">
+                    {(viewingBooking.metadata as any)?.clientNotes || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Internal Notes (Admin/Staff Only)</p>
+                  <p className="font-medium text-sm">{viewingBooking.notes || '-'}</p>
                 </div>
               </div>
             );
@@ -888,7 +899,7 @@ export default function AdminBookings() {
 
       {/* Edit Booking Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Booking</DialogTitle>
           </DialogHeader>
@@ -960,12 +971,24 @@ export default function AdminBookings() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Notes</Label>
+                <Label>Client Notes (From Booking Form)</Label>
+                <p className="text-xs text-muted-foreground mb-2">Original notes provided by the client when booking.</p>
+                <textarea
+                  className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md bg-muted/50"
+                  value={editFormData.clientNotes}
+                  readOnly
+                  disabled
+                  placeholder="No client notes"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Internal Notes (Admin/Staff Only)</Label>
+                <p className="text-xs text-muted-foreground mb-2">These notes are only visible to staff and admins, not to clients.</p>
                 <textarea
                   className="w-full min-h-[100px] px-3 py-2 text-sm border rounded-md bg-background"
                   value={editFormData.notes}
                   onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                  placeholder="Additional notes..."
+                  placeholder="Internal notes for staff/admin..."
                 />
               </div>
             </div>

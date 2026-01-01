@@ -39,43 +39,37 @@ export function DateTimePicker({
   const timeValue = dateTimeValue ? format(dateTimeValue, 'HH:mm') : '09:00';
   
   const [selectedTime, setSelectedTime] = React.useState(timeValue);
+  const [tempDate, setTempDate] = React.useState<Date | undefined>(dateValue);
+  const [tempTime, setTempTime] = React.useState(timeValue);
   
   // Update time when value changes
   React.useEffect(() => {
     if (dateTimeValue) {
       setSelectedTime(format(dateTimeValue, 'HH:mm'));
+      setTempTime(format(dateTimeValue, 'HH:mm'));
+      setTempDate(new Date(dateTimeValue.getFullYear(), dateTimeValue.getMonth(), dateTimeValue.getDate()));
     }
   }, [value]);
   
-  // Handle date selection
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      // Combine selected date with current time
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const newDateTime = new Date(date);
-      newDateTime.setHours(hours, minutes, 0, 0);
-      onChange(newDateTime.toISOString());
-    }
-  };
-  
-  // Handle time change
-  const handleTimeChange = (time: string) => {
-    setSelectedTime(time);
-    if (dateValue) {
-      const [hours, minutes] = time.split(':').map(Number);
-      const newDateTime = new Date(dateValue);
-      newDateTime.setHours(hours, minutes, 0, 0);
-      onChange(newDateTime.toISOString());
-    }
-  };
-  
-  // Handle calendar date selection
+  // Handle calendar date selection (temporary)
   const handleCalendarSelect = (date: Date | undefined) => {
-    if (date) {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const newDateTime = new Date(date);
+    setTempDate(date);
+  };
+
+  // Handle time change (temporary)
+  const handleTimeChangeTemp = (time: string) => {
+    setTempTime(time);
+  };
+
+  // Confirm and apply the selected date and time
+  const handleConfirm = () => {
+    if (tempDate) {
+      const [hours, minutes] = tempTime.split(':').map(Number);
+      const newDateTime = new Date(tempDate);
       newDateTime.setHours(hours, minutes, 0, 0);
       onChange(newDateTime.toISOString());
+      setSelectedTime(tempTime);
+      setOpen(false);
     }
   };
 
@@ -99,29 +93,41 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-50" align="start" sideOffset={4}>
-        <div className="p-3 space-y-3">
+      <PopoverContent 
+        className="w-auto p-0 z-[9999]" 
+        align="start" 
+        sideOffset={5}
+        side="bottom"
+        style={{ zIndex: 9999 }}
+      >
+        <div className="p-4 flex gap-4">
           <Calendar
             mode="single"
-            selected={dateValue}
+            selected={tempDate}
             onSelect={handleCalendarSelect}
             initialFocus
             fromDate={fromDate}
             toDate={toDate}
           />
-          <div className="border-t pt-3 space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
+          <div className="border-l pl-4 flex flex-col justify-center space-y-3 w-[200px]">
+            <Label className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
               Time
             </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => handleTimeChange(e.target.value)}
-                className="w-full min-w-[140px]"
-              />
-            </div>
+            <Input
+              type="time"
+              value={tempTime}
+              onChange={(e) => handleTimeChangeTemp(e.target.value)}
+              className="w-full h-11 text-base"
+              style={{ fontSize: '16px', minWidth: '180px' }}
+            />
+            <Button
+              onClick={handleConfirm}
+              className="w-full h-10"
+              disabled={!tempDate}
+            >
+              Confirm
+            </Button>
           </div>
         </div>
       </PopoverContent>

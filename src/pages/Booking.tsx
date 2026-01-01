@@ -78,14 +78,15 @@ export default function Booking() {
         booking_type: meeting?.title || meetingType,
         scheduled_at: scheduledAt.toISOString(),
         duration_minutes: meeting?.duration || 30,
-        status: 'confirmed',
-        notes: formData.notes || null,
+        status: 'pending',
+        notes: null, // Internal notes for admin/staff only
         client_id: user?.id || null,
         metadata: {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
           company: formData.company,
+          clientNotes: formData.notes || null, // Client's notes from booking form
         },
       };
 
