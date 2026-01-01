@@ -190,14 +190,14 @@ export default function Services() {
     }
     try {
       const { data, error } = await supabase
-        .from('services')
+        .from('services' as any)
         .select('*')
         .eq('published', true)
         .order('display_order', { ascending: true });
 
       if (error) throw error;
 
-      const servicesData: ServiceData[] = (data || []).map((s) => ({
+      const servicesData: ServiceData[] = ((data || []) as any[]).map((s: any) => ({
         icon: iconMap[s.icon_name || 'Globe'] || Globe,
         title: s.title,
         slug: s.slug,
@@ -217,19 +217,38 @@ export default function Services() {
   const loadServiceImages = async () => {
     if (!supabase) return;
     try {
-      const { data, error } = await supabase
-        .from('services')
+      // Try to get images from services table first
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services' as any)
         .select('slug, image_url')
         .eq('published', true);
 
-      if (error) throw error;
+      if (servicesError) throw servicesError;
 
       const imagesMap: Record<string, string> = {};
-      data?.forEach((item) => {
+      
+      // Add images from services table
+      ((servicesData || []) as any[]).forEach((item: any) => {
         if (item.image_url) {
           imagesMap[item.slug] = item.image_url;
         }
       });
+
+      // Also check service_images table as fallback
+      const { data: imagesData, error: imagesError } = await supabase
+        .from('service_images' as any)
+        .select('service_slug, image_url');
+
+      if (!imagesError && imagesData) {
+        ((imagesData || []) as any[]).forEach((item: any) => {
+          if (item.image_url && !imagesMap[item.service_slug]) {
+            // Only use if not already set from services table
+            imagesMap[item.service_slug] = item.image_url;
+          }
+        });
+      }
+
+      console.log('Loaded service images:', imagesMap);
       setServiceImages(imagesMap);
     } catch (error) {
       console.error('Error loading service images:', error);

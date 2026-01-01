@@ -379,6 +379,20 @@ export default function ServicesAdmin() {
           console.error('Error saving service image:', imageError);
           // Don't fail the whole operation if image save fails
           toast.error('Service saved but image update failed');
+        } else {
+          console.log('Service image saved successfully:', imagePayload);
+        }
+      } else {
+        // If no image URL but editing, check if we should clear existing image
+        if (editingId && !imageUrl) {
+          // Optionally remove from service_images if image_url is cleared
+          const { error: clearError } = await supabase
+            .from('service_images')
+            .delete()
+            .eq('service_slug', formData.slug.trim());
+          if (clearError) {
+            console.error('Error clearing service image:', clearError);
+          }
         }
       }
 
