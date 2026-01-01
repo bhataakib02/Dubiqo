@@ -66,7 +66,7 @@
 | Feature | Description |
 |---------|-------------|
 | **Landing Page** | Modern, conversion-optimized homepage |
-| **Services** | Detailed service pages (Websites, Portfolios, Billing Systems, Dashboards, Troubleshooting, Maintenance) |
+| **Services** | Dynamic service pages with database-driven content (Custom Websites, Web Apps, Dashboards, E-Commerce, Portfolios, Site Repair, Maintenance) |
 | **Portfolio** | Showcase of completed projects |
 | **Case Studies** | In-depth project success stories |
 | **Pricing** | Dynamic pricing plans management |
@@ -235,8 +235,10 @@ The application will be available at `http://localhost:5173`
    supabase db push
    
    # Or manually via Supabase Dashboard
-   # Navigate to SQL Editor and run migrations from:
-   # supabase/migrations/
+   # Navigate to SQL Editor and run migrations in this order:
+   # 1. supabase/create_services_table.sql
+   # 2. supabase/create_service_images_table.sql
+   # 3. supabase/update_service_images_high_quality.sql (optional - adds images)
    ```
 
 3. **Create Admin User**
@@ -275,12 +277,16 @@ Dubiqo/
 │   │   │   ├── Bookings.tsx
 │   │   │   ├── Invoices.tsx
 │   │   │   ├── Tickets.tsx
+│   │   │   ├── ServicesAdmin.tsx    # Services management (with tabs for services and images)
+│   │   │   ├── ServiceImages.tsx    # Service images management (legacy, now integrated)
 │   │   │   ├── BlogsAdmin.tsx
 │   │   │   ├── CaseStudiesAdmin.tsx
 │   │   │   ├── PricingAdmin.tsx
 │   │   │   └── Downloads.tsx
 │   │   │
 │   │   ├── services/            # Service detail pages
+│   │   ├── Services.tsx         # Main services listing page (database-driven)
+│   │   ├── ServiceDetail.tsx    # Individual service detail page (database-driven)
 │   │   ├── legal/               # Legal pages (Privacy, Terms, etc.)
 │   │   ├── Index.tsx            # Landing page
 │   │   ├── Blog.tsx             # Blog listing
@@ -305,10 +311,15 @@ Dubiqo/
 │
 ├── supabase/
 │   ├── migrations/              # Database migrations
+│   ├── create_services_table.sql          # Services table schema
+│   ├── create_service_images_table.sql    # Service images table schema
+│   ├── update_service_images_high_quality.sql  # High-quality image URLs
 │   ├── functions/               # Edge Functions
 │   └── seeds/                   # Seed data
 │
-├── public/                       # Static assets
+├── scripts/
+│   └── add-service-images.js    # Service images configuration script
+├── public/                       # Static assets (favicon.ico, favicon.svg)
 ├── assets/                       # Images and media
 └── README.md                     # This file
 ```
@@ -529,6 +540,8 @@ The admin portal is **completely hidden** from public access:
 - Profile management
 
 #### Content Management
+- **Services Management** - Complete CRUD for all services with features, benefits, pricing, process steps, and images
+- **Service Images** - Upload and manage high-quality images for each service
 - Blog posts (create, edit, publish)
 - Case studies (create, edit, publish)
 - Pricing plans (dynamic management)
@@ -568,10 +581,37 @@ The admin portal is **completely hidden** from public access:
 ### Sample Data
 
 The project includes seed data for:
+- Services (7 default services with complete details)
+- Service images (high-quality Unsplash images)
 - Blog posts (sample articles)
 - Case studies (example projects)
 - Downloads (sample resources)
 - Feature flags (default configuration)
+
+### Services Management
+
+The platform includes a comprehensive services management system:
+
+- **Services Table**: Stores all service details including:
+  - Basic info (slug, title, descriptions)
+  - Pricing (text and amount)
+  - Features and benefits (arrays)
+  - Process steps (structured JSON)
+  - Images (URLs and storage paths)
+  - Display order and publish status
+
+- **Admin Interface**: 
+  - Single unified page with tabs for Services and Images
+  - Professional form interface (no JSON editing required)
+  - Drag-and-drop or URL-based image uploads
+  - Real-time preview and validation
+  - Bulk management capabilities
+
+- **Image Management**:
+  - Integrated image upload in service forms
+  - Automatic sync between `services` and `service_images` tables
+  - Support for high-resolution images (1920px width recommended)
+  - Fallback to SVG illustrations if images fail to load
 
 ---
 
