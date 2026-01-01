@@ -69,6 +69,44 @@ export default function AdminBookings() {
   });
   const [staffMembers, setStaffMembers] = useState<Array<{ id: string; full_name: string | null; email: string; role?: string }>>([]);
 
+  const loadStaffMembers = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      // Get all users with staff or admin role
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['staff', 'admin']);
+      
+      if (!roles || roles.length === 0) {
+        setStaffMembers([]);
+        return;
+      }
+
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, metadata')
+        .in('id', userIds);
+
+      if (error) throw error;
+
+      const staffWithRoles = (profiles || []).map((p) => {
+        const metadata = p.metadata as any;
+        const descriptiveRole = metadata?.role || metadata?.job_title || metadata?.position || 'staff';
+        return {
+          ...p,
+          role: descriptiveRole
+        };
+      });
+
+      setStaffMembers(staffWithRoles);
+    } catch (error) {
+      console.error('Error loading staff members:', error);
+      setStaffMembers([]);
+    }
+  }, []);
+
   const loadBookings = useCallback(async () => {
     if (!supabase) return;
     setIsLoading(true);
@@ -78,10 +116,32 @@ export default function AdminBookings() {
         .from('bookings')
         .select(`
           *,
-          client:profiles!bookings_client_id_fkey(full_name, email, client_code),
-          assigned_staff:profiles!bookings_assigned_to_fkey(id, full_name, email, metadata)
+          client:profiles!bookings_client_id_fkey(full_name, email, client_code)
         `)
         .order('scheduled_at', { ascending: true });
+
+      // Load assigned staff separately if assigned_to column exists
+      if (data && data.length > 0) {
+        const assignedToIds = data
+          .map((b: any) => b.assigned_to)
+          .filter((id: string | null) => id !== null) as string[];
+        
+        if (assignedToIds.length > 0) {
+          const { data: staffProfiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, metadata')
+            .in('id', assignedToIds);
+          
+          const staffMap = new Map((staffProfiles || []).map((s: any) => [s.id, s]));
+          
+          // Add assigned_staff to each booking
+          data.forEach((booking: any) => {
+            if (booking.assigned_to && staffMap.has(booking.assigned_to)) {
+              booking.assigned_staff = staffMap.get(booking.assigned_to);
+            }
+          });
+        }
+      }
 
       if (error) throw error;
 
@@ -162,7 +222,8 @@ export default function AdminBookings() {
 
   useEffect(() => {
     initializeBookings();
-  }, [initializeBookings]);
+    loadStaffMembers();
+  }, [initializeBookings, loadStaffMembers]);
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     if (!supabase) return;
@@ -319,6 +380,10 @@ export default function AdminBookings() {
       status: booking.status || 'pending',
       assigned_to: (booking as any).assigned_to || '',
     });
+    // Ensure staff members are loaded when opening edit dialog
+    if (staffMembers.length === 0) {
+      loadStaffMembers();
+    }
     setIsEditOpen(true);
   };
 
@@ -848,14 +913,14 @@ export default function AdminBookings() {
               <div className="space-y-2">
                 <Label>Assign Staff</Label>
                 <Select
-                  value={editFormData.assigned_to}
-                  onValueChange={(value) => setEditFormData({ ...editFormData, assigned_to: value })}
+                  value={editFormData.assigned_to || 'unassigned'}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, assigned_to: value === 'unassigned' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select staff member (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (Unassigned)</SelectItem>
+                    <SelectItem value="unassigned">None (Unassigned)</SelectItem>
                     {staffMembers.map((staff) => (
                       <SelectItem key={staff.id} value={staff.id}>
                         {staff.full_name || staff.email} {staff.role && `(${staff.role})`}

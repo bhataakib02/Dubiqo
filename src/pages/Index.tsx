@@ -73,29 +73,12 @@ const stats = [
   { value: '24/7', label: 'Support Available' },
 ];
 
-const testimonials = [
-  {
-    quote:
-      'Dubiqo transformed our online presence. Our conversions increased by 45% within the first month.',
-    author: 'Sarah Chen',
-    role: 'CEO, TechStart Inc.',
-    rating: 5,
-  },
-  {
-    quote:
-      'Professional, responsive, and incredibly talented. They delivered our project ahead of schedule.',
-    author: 'Michael Roberts',
-    role: 'Founder, StyleHub',
-    rating: 5,
-  },
-  {
-    quote:
-      "The best investment we've made for our business. Our new dashboard saves us hours every week.",
-    author: 'Emily Watson',
-    role: 'Operations Director',
-    rating: 5,
-  },
-];
+type Testimonial = {
+  quote: string;
+  author: string;
+  role: string;
+  rating: number;
+};
 
 type DiscountBanner = {
   title: string;
@@ -106,48 +89,92 @@ type DiscountBanner = {
 
 const Index = () => {
   const [discountBanner, setDiscountBanner] = useState<DiscountBanner | null>(null);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
 
   useEffect(() => {
     loadDiscountBanner();
+    loadTestimonials();
   }, []);
+
+  const loadTestimonials = async () => {
+    if (!supabase) {
+      setIsLoadingTestimonials(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('testimonials' as any)
+        .select('quote, author, role, rating')
+        .eq('active', true)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error('Error loading testimonials:', error);
+        // Fallback to empty array if table doesn't exist yet
+        setTestimonials([]);
+        return;
+      }
+      
+      setTestimonials((data || []) as Testimonial[]);
+    } catch (err) {
+      console.error('Error loading testimonials:', err);
+      setTestimonials([]);
+    } finally {
+      setIsLoadingTestimonials(false);
+    }
+  };
 
   const loadDiscountBanner = async () => {
     if (!supabase) return;
     try {
-      // First, get the active discount key
+      // First, get the active discount key (use name column, not key)
       const { data: activeData, error: activeError } = await supabase
         .from('feature_flags' as any)
-        .select('key, description, enabled')
-        .eq('key', 'pricing_discount_active')
-        .eq('enabled', true)
+        .select('name, description, enabled')
+        .eq('name', 'pricing_discount_active')
         .maybeSingle();
       
-      if (activeError || !activeData || !(activeData as any).description) {
+      if (activeError) {
+        console.error('Error loading active discount key:', activeError);
         return;
       }
       
-      const activeKey = (activeData as any).description;
+      if (!activeData || !activeData.description || !activeData.enabled) {
+        // No active discount banner set
+        return;
+      }
+      
+      const activeKey = activeData.description;
       
       // Then, get the actual discount banner
       const { data, error } = await supabase
         .from('feature_flags' as any)
-        .select('key, description, enabled')
-        .eq('key', activeKey)
-        .eq('enabled', true)
+        .select('name, description, enabled')
+        .eq('name', activeKey)
         .maybeSingle();
       
       if (error) {
         if (error.code === 'PGRST116') {
+          // Banner not found - that's okay
           return;
         }
         console.error('Error loading discount banner:', error);
         return;
       }
       
-      if (data && (data as any).description && (data as any).enabled) {
+      if (!data || !data.description) {
+        return;
+      }
+      
+      // Check if the feature flag is enabled AND parse the banner
+      if (data.enabled) {
         try {
-          const banner = JSON.parse((data as any).description) as DiscountBanner;
-          if (banner.active) {
+          const banner = JSON.parse(data.description) as DiscountBanner;
+          // Set the banner if it's marked as active in the JSON (double check)
+          if (banner && banner.active !== false) {
             setDiscountBanner(banner);
           }
         } catch (parseError) {
@@ -333,8 +360,8 @@ const Index = () => {
       {/* Why Choose Us */}
       <Section variant="muted">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="space-y-8">
               <SectionHeader
                 badge="Why Dubiqo"
                 title="Built for Growth"
@@ -347,50 +374,77 @@ const Index = () => {
                   {
                     icon: Zap,
                     title: 'Lightning Fast',
-                    description: 'Optimized for speed and performance from day one.',
+                    description: 'Optimized for speed and performance from day one. Your visitors won\'t wait—and neither will your competitors.',
+                    color: 'from-yellow-500/20 to-orange-500/20',
+                    iconColor: 'text-yellow-500',
                   },
                   {
                     icon: Shield,
                     title: 'Secure & Reliable',
-                    description: 'Enterprise-grade security for your peace of mind.',
+                    description: 'Enterprise-grade security for your peace of mind. Your data is protected with industry-leading practices.',
+                    color: 'from-blue-500/20 to-indigo-500/20',
+                    iconColor: 'text-blue-500',
                   },
                   {
                     icon: Users,
                     title: 'Dedicated Support',
-                    description: 'Real humans ready to help when you need it.',
+                    description: 'Real humans ready to help when you need it. No bots, no queues—just expert assistance.',
+                    color: 'from-green-500/20 to-emerald-500/20',
+                    iconColor: 'text-green-500',
                   },
                   {
                     icon: Clock,
                     title: 'On-Time Delivery',
-                    description: 'We respect deadlines and keep our promises.',
+                    description: 'We respect deadlines and keep our promises. Your timeline is as important as ours.',
+                    color: 'from-purple-500/20 to-pink-500/20',
+                    iconColor: 'text-purple-500',
                   },
                 ].map((item, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <item.icon className="w-6 h-6 text-primary" />
+                  <div 
+                    key={index} 
+                    className="group flex gap-4 p-4 rounded-xl hover:bg-card/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 border border-transparent hover:border-border/50"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+                      <item.icon className={`w-7 h-7 ${item.iconColor}`} />
                     </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">{item.title}</h3>
-                      <p className="text-muted-foreground text-sm">{item.description}</p>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">{item.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{item.description}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 rounded-2xl blur-3xl animate-pulse" />
-              <div className="relative aspect-square rounded-2xl bg-gradient-to-br from-primary/20 via-accent/10 to-primary/5 p-8 border border-border/50 hover:border-primary/50 transition-all duration-300">
-                <div className="h-full rounded-xl bg-card/80 backdrop-blur border border-border/50 flex items-center justify-center hover:scale-105 transition-transform duration-300">
-                  <div className="text-center p-8">
-                    <div className="text-7xl font-bold gradient-text mb-4">4.9</div>
-                    <div className="flex justify-center gap-1 mb-3">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-6 h-6 fill-primary text-primary" />
-                      ))}
+            <div className="relative lg:sticky lg:top-24">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 rounded-3xl blur-3xl animate-pulse opacity-60" />
+              <div className="relative">
+                <div className="aspect-square rounded-3xl bg-gradient-to-br from-card via-card/95 to-card/90 backdrop-blur-xl border-2 border-primary/20 shadow-2xl shadow-primary/10 hover:shadow-primary/20 transition-all duration-500 hover:scale-[1.02] hover:border-primary/40 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+                  <div className="h-full flex items-center justify-center p-8 relative z-10">
+                    <div className="text-center space-y-6 w-full">
+                      <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary via-accent to-primary rounded-full blur-2xl opacity-50 animate-pulse" />
+                        <div className="relative text-8xl md:text-9xl font-bold gradient-text mb-2">4.9</div>
+                      </div>
+                      <div className="flex justify-center gap-1.5 mb-4">
+                        {[...Array(5)].map((_, i) => (
+                          <Star 
+                            key={i} 
+                            className="w-8 h-8 fill-yellow-400 text-yellow-400 drop-shadow-lg" 
+                          />
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-foreground font-semibold text-lg">Average Client Rating</p>
+                        <p className="text-muted-foreground">Based on 50+ reviews</p>
+                        <div className="pt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          <span>Verified Reviews</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-muted-foreground font-medium">Average Client Rating</p>
-                    <p className="text-sm text-muted-foreground mt-2">Based on 50+ reviews</p>
                   </div>
                 </div>
               </div>
@@ -408,30 +462,40 @@ const Index = () => {
             subtitle="Don't just take our word for it—hear from the businesses we've helped grow."
           />
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card 
-                key={index} 
-                className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 group hover:shadow-xl hover:shadow-primary/10"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardContent className="p-8">
-                  <div className="flex gap-1 mb-6">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <blockquote className="text-lg mb-6 leading-relaxed italic">
-                    "{testimonial.quote}"
-                  </blockquote>
-                  <div className="pt-4 border-t border-border/50">
-                    <div className="font-semibold text-foreground mb-1">{testimonial.author}</div>
-                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {isLoadingTestimonials ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : testimonials.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No testimonials available at the moment.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {testimonials.map((testimonial, index) => (
+                <Card 
+                  key={index} 
+                  className="bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all duration-300 group hover:shadow-xl hover:shadow-primary/10"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <CardContent className="p-8">
+                    <div className="flex gap-1 mb-6">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    <blockquote className="text-lg mb-6 leading-relaxed italic">
+                      "{testimonial.quote}"
+                    </blockquote>
+                    <div className="pt-4 border-t border-border/50">
+                      <div className="font-semibold text-foreground mb-1">{testimonial.author}</div>
+                      <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
 

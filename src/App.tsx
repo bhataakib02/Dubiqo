@@ -54,6 +54,7 @@ import AdminPortfolio from './pages/admin/PortfolioAdmin';
 import AdminCaseStudies from './pages/admin/CaseStudiesAdmin';
 import AdminBlogs from './pages/admin/BlogsAdmin';
 import AdminPricing from './pages/admin/PricingAdmin';
+import AdminTestimonials from './pages/admin/TestimonialsAdmin';
 
 const queryClient = new QueryClient();
 
@@ -179,6 +180,14 @@ const App = () => (
             element={
               <ProtectedRoute requiredRole={['admin', 'staff']}>
                 <AdminPricing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/testimonials"
+            element={
+              <ProtectedRoute requiredRole={['admin', 'staff']}>
+                <AdminTestimonials />
               </ProtectedRoute>
             }
           />

@@ -90,15 +90,20 @@ export default function Pricing() {
   const loadDiscountBanner = async () => {
     if (!supabase) return;
     try {
-      // First, get the active discount key
+      // First, get the active discount key (use name column, not key)
       const { data: activeData, error: activeError } = await supabase
         .from('feature_flags' as any)
-        .select('key, description, enabled')
-        .eq('key', 'pricing_discount_active')
-        .eq('enabled', true)
+        .select('name, description, enabled')
+        .eq('name', 'pricing_discount_active')
         .maybeSingle();
       
-      if (activeError || !activeData || !activeData.description) {
+      if (activeError) {
+        console.error('Error loading active discount key:', activeError);
+        return;
+      }
+      
+      if (!activeData || !activeData.description || !activeData.enabled) {
+        // No active discount banner set
         return;
       }
       
@@ -107,23 +112,29 @@ export default function Pricing() {
       // Then, get the actual discount banner
       const { data, error } = await supabase
         .from('feature_flags' as any)
-        .select('key, description, enabled')
-        .eq('key', activeKey)
-        .eq('enabled', true)
+        .select('name, description, enabled')
+        .eq('name', activeKey)
         .maybeSingle();
       
       if (error) {
         if (error.code === 'PGRST116') {
+          // Banner not found - that's okay
           return;
         }
         console.error('Error loading discount banner:', error);
         return;
       }
       
-      if (data && data.description && data.enabled) {
+      if (!data || !data.description) {
+        return;
+      }
+      
+      // Check if the feature flag is enabled AND parse the banner
+      if (data.enabled) {
         try {
           const banner = JSON.parse(data.description) as DiscountBanner;
-          if (banner.active) {
+          // Set the banner if it's marked as active in the JSON (double check)
+          if (banner && banner.active !== false) {
             setDiscountBanner(banner);
           }
         } catch (parseError) {
@@ -155,14 +166,14 @@ export default function Pricing() {
       }
       
       // Filter to only show published plans
-      // If published field doesn't exist (backward compatibility), show all active plans
-      // Otherwise, only show plans where published is explicitly true
+      // Show plans if: published is true, or published is null/undefined (backward compatibility)
+      // Only hide plans if published is explicitly false
       const publishedPlans = (data || []).filter((plan: any) => {
-        // If published field doesn't exist in the plan object, show it (backward compatibility)
-        if (!('published' in plan)) {
+        // If published field doesn't exist or is null/undefined, show it (backward compatibility)
+        if (!('published' in plan) || plan.published === null || plan.published === undefined) {
           return true;
         }
-        // Otherwise, only show if published is explicitly true
+        // Show if published is explicitly true
         return plan.published === true;
       }) as unknown as PricingPlan[];
       

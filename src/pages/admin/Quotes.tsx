@@ -314,24 +314,326 @@ export default function AdminQuotes() {
   };
 
   const handleExportQuote = (quote: QuoteWithClient) => {
-    // Create a downloadable quote document
-    const quoteData = {
-      id: quote.id,
-      client: quote.client?.full_name || 'N/A',
-      email: quote.client?.email || 'N/A',
-      serviceType: quote.service_type,
-      estimatedCost: formatCurrency(quote.estimated_cost),
-      validUntil: new Date(quote.valid_until).toLocaleDateString(),
-      status: quote.status,
-      created: new Date(quote.created_at).toLocaleDateString(),
-      projectDetails: quote.project_details,
-    };
+    const projectDetails = quote.project_details as Record<string, unknown> | null;
+    const clientName = quote.client?.full_name || (projectDetails?.name as string) || 'N/A';
+    const clientEmail = quote.client?.email || (projectDetails?.email as string) || 'N/A';
+    const clientCode = quote.client?.client_code || 'N/A';
+    
+    // Generate professional HTML quote document
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quote ${quote.id.substring(0, 8)} - Dubiqo Digital Solutions</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background: #ffffff;
+      padding: 40px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+    }
+    .header {
+      border-bottom: 3px solid #0066cc;
+      padding-bottom: 30px;
+      margin-bottom: 40px;
+    }
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+    }
+    .company-name {
+      font-size: 28px;
+      font-weight: bold;
+      color: #0066cc;
+    }
+    .tagline {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .quote-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin: 30px 0 10px 0;
+      color: #1a1a1a;
+    }
+    .quote-subtitle {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    .info-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .info-block h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #666;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .info-block p {
+      font-size: 16px;
+      color: #1a1a1a;
+      margin: 5px 0;
+    }
+    .details-section {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 2px solid #e5e5e5;
+    }
+    .details-section h2 {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #1a1a1a;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .detail-label {
+      font-weight: 600;
+      color: #666;
+      text-transform: capitalize;
+    }
+    .detail-value {
+      color: #1a1a1a;
+      text-align: right;
+    }
+    .amount-large {
+      font-size: 24px;
+      font-weight: bold;
+      color: #0066cc;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-approved {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-rejected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-expired {
+      background: #e2e3e5;
+      color: #383d41;
+    }
+    .project-details {
+      margin-top: 30px;
+      padding: 25px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .project-details h3 {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #1a1a1a;
+    }
+    .project-field {
+      margin-bottom: 20px;
+    }
+    .project-field label {
+      display: block;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #666;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .project-field p {
+      font-size: 16px;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+    .features-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .features-list li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+      font-size: 16px;
+      color: #1a1a1a;
+    }
+    .features-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #0066cc;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 2px solid #e5e5e5;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+    @media print {
+      body {
+        padding: 20px;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo-section">
+        <div class="logo">D</div>
+        <div>
+          <div class="company-name">Dubiqo</div>
+          <div class="tagline">Digital Solutions</div>
+        </div>
+      </div>
+      <div class="quote-title">Quote</div>
+      <div class="quote-subtitle">Professional Service Quote</div>
+    </div>
 
-    const blob = new Blob([JSON.stringify(quoteData, null, 2)], { type: 'application/json' });
+    <div class="info-section">
+      <div class="info-block">
+        <h3>Client Information</h3>
+        <p><strong>${clientName}</strong></p>
+        <p>${clientEmail}</p>
+        ${clientCode !== 'N/A' ? `<p style="font-family: monospace; color: #0066cc; margin-top: 5px;">${clientCode}</p>` : ''}
+      </div>
+      <div class="info-block">
+        <h3>Quote Information</h3>
+        <p><strong>Quote ID:</strong> ${quote.id.substring(0, 8)}...</p>
+        <p><strong>Date:</strong> ${new Date(quote.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        <p><strong>Valid Until:</strong> ${new Date(quote.valid_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      </div>
+    </div>
+
+    <div class="details-section">
+      <h2>Quote Details</h2>
+      <div class="detail-row">
+        <span class="detail-label">Service Type</span>
+        <span class="detail-value" style="text-transform: capitalize;">${quote.service_type}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value">
+          <span class="status-badge status-${quote.status}">${quote.status}</span>
+        </span>
+      </div>
+      <div class="detail-row" style="border-bottom: 2px solid #0066cc; padding-bottom: 20px; margin-bottom: 20px;">
+        <span class="detail-label" style="font-size: 18px;">Estimated Cost</span>
+        <span class="detail-value amount-large">${formatCurrency(quote.estimated_cost)}</span>
+      </div>
+    </div>
+
+    ${projectDetails ? `
+    <div class="project-details">
+      <h3>Project Details</h3>
+      ${projectDetails.pages !== undefined && projectDetails.pages !== null ? `
+      <div class="project-field">
+        <label>Pages</label>
+        <p>${projectDetails.pages}</p>
+      </div>
+      ` : ''}
+      ${projectDetails.details ? `
+      <div class="project-field">
+        <label>Description</label>
+        <p>${String(projectDetails.details)}</p>
+      </div>
+      ` : ''}
+      ${projectDetails.features && Array.isArray(projectDetails.features) && projectDetails.features.length > 0 ? `
+      <div class="project-field">
+        <label>Features</label>
+        <ul class="features-list">
+          ${projectDetails.features.map((feature: unknown) => `<li>${String(feature)}</li>`).join('')}
+        </ul>
+      </div>
+      ` : ''}
+      ${projectDetails.timeline ? `
+      <div class="project-field">
+        <label>Timeline</label>
+        <p>${String(projectDetails.timeline)}</p>
+      </div>
+      ` : ''}
+      ${Object.entries(projectDetails).filter(([key]) => !['name', 'email', 'pages', 'details', 'features', 'timeline'].includes(key)).map(([key, value]) => {
+        if (value === null || value === undefined) return '';
+        return `
+      <div class="project-field">
+        <label>${key.replace(/_/g, ' ')}</label>
+        <p>${Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
+      </div>
+        `;
+      }).join('')}
+    </div>
+    ` : ''}
+
+    <div class="footer">
+      <p><strong>Dubiqo Digital Solutions</strong></p>
+      <p>We build websites that build your business</p>
+      <p style="margin-top: 10px;">hello@dubiqo.com | +1 (234) 567-890</p>
+      <p style="margin-top: 5px; font-size: 12px; color: #999;">Quote ID: ${quote.id}</p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Create blob and download
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `quote-${quote.id}.json`;
+    a.download = `quote-${quote.id.substring(0, 8)}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -681,12 +983,68 @@ export default function AdminQuotes() {
                 </div>
               </div>
               {selectedQuote.project_details && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Project Details</p>
-                  <div className="p-4 bg-muted rounded-md">
-                    <pre className="text-sm whitespace-pre-wrap">
-                      {JSON.stringify(selectedQuote.project_details, null, 2)}
-                    </pre>
+                <div className="space-y-4 pt-4 border-t">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Project Details</p>
+                  <div className="grid gap-4">
+                    {(() => {
+                      const details = selectedQuote.project_details as Record<string, unknown>;
+                      const excludeFields = ['name', 'email']; // Already shown in client section
+                      
+                      return (
+                        <>
+                          {details.pages !== undefined && details.pages !== null && (
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Pages</p>
+                              <p className="text-base">{String(details.pages)}</p>
+                            </div>
+                          )}
+                          {details.details && (
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Description</p>
+                              <p className="text-base">{String(details.details)}</p>
+                            </div>
+                          )}
+                          {details.features && Array.isArray(details.features) && details.features.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground mb-2">Features</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                {details.features.map((feature: unknown, index: number) => (
+                                  <li key={index} className="text-base">{String(feature)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {details.timeline && (
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Timeline</p>
+                              <p className="text-base">{String(details.timeline)}</p>
+                            </div>
+                          )}
+                          {/* Display any other fields that aren't already shown */}
+                          {Object.entries(details).map(([key, value]) => {
+                            if (excludeFields.includes(key) || 
+                                ['pages', 'details', 'features', 'timeline'].includes(key) ||
+                                value === null || value === undefined) {
+                              return null;
+                            }
+                            return (
+                              <div key={key}>
+                                <p className="text-sm font-medium text-muted-foreground capitalize">
+                                  {key.replace(/_/g, ' ')}
+                                </p>
+                                <p className="text-base">
+                                  {Array.isArray(value)
+                                    ? value.join(', ')
+                                    : typeof value === 'object'
+                                    ? JSON.stringify(value)
+                                    : String(value)}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}

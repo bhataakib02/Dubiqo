@@ -99,7 +99,7 @@ export function DateTimePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-50" align="start" sideOffset={4}>
         <div className="p-3 space-y-3">
           <Calendar
             mode="single"
@@ -110,14 +110,16 @@ export function DateTimePicker({
             toDate={toDate}
           />
           <div className="border-t pt-3 space-y-2">
-            <Label className="text-sm font-medium">Time</Label>
-            <div className="flex items-center gap-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
+              Time
+            </Label>
+            <div className="flex items-center gap-2">
               <Input
                 type="time"
                 value={selectedTime}
                 onChange={(e) => handleTimeChange(e.target.value)}
-                className="w-32"
+                className="w-full min-w-[140px]"
               />
             </div>
           </div>

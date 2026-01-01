@@ -54,6 +54,7 @@ type DiscountBanner = {
 export default function PricingAdmin() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDiscountLoading, setIsDiscountLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PricingPlan | null>(null);
@@ -85,19 +86,26 @@ export default function PricingAdmin() {
 
   const loadDiscountBanners = async () => {
     if (!supabase) return;
+    setIsDiscountLoading(true);
     try {
-      // Load all discount banners (keys starting with 'pricing_discount_')
+      // Load all discount banners (names starting with 'pricing_discount_')
       const { data, error } = await supabase
         .from('feature_flags' as any)
-        .select('key, description, enabled')
-        .like('key', 'pricing_discount_%')
+        .select('id, name, description, enabled')
+        .like('name', 'pricing_discount_%')
         .order('created_at', { ascending: false });
       
       if (error) {
         if (error.code === 'PGRST116') {
+          // No data found - that's okay
+          setDiscountBanners([]);
+          setActiveDiscountKey(null);
+          setIsDiscountLoading(false);
           return;
         }
         console.error('Error loading discount banners:', error);
+        toast.error('Failed to load discount banners: ' + (error.message || 'Unknown error'));
+        setIsDiscountLoading(false);
         return;
       }
       
@@ -107,14 +115,14 @@ export default function PricingAdmin() {
         
         data.forEach((item: any) => {
           try {
-            if (item.key === 'pricing_discount_active') {
+            if (item.name === 'pricing_discount_active') {
               // This is the active discount key
               activeKey = item.description;
             } else if (item.description) {
               const bannerData = JSON.parse(item.description);
               banners.push({
-                id: item.key,
-                key: item.key,
+                id: item.id,
+                key: item.name, // Map name to key for internal use
                 ...bannerData,
                 enabled: item.enabled,
               });
@@ -134,9 +142,15 @@ export default function PricingAdmin() {
             setDiscountBanner(activeBanner);
           }
         }
+      } else {
+        setDiscountBanners([]);
+        setActiveDiscountKey(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading discount banners:', err);
+      toast.error('Failed to load discount banners: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setIsDiscountLoading(false);
     }
   };
 
@@ -151,11 +165,11 @@ export default function PricingAdmin() {
       // Generate key if new
       const bannerKey = discountBanner.key || `pricing_discount_${Date.now()}`;
       
-      // Save the discount banner
+      // Save the discount banner (use name column, not key)
       const { error: saveError } = await supabase
         .from('feature_flags' as any)
         .upsert({
-          key: bannerKey,
+          name: bannerKey,
           description: JSON.stringify({
             title: discountBanner.title,
             description: discountBanner.description,
@@ -164,7 +178,7 @@ export default function PricingAdmin() {
           }),
           enabled: discountBanner.active,
         } as any, {
-          onConflict: 'key'
+          onConflict: 'name'
         });
       
       if (saveError) throw saveError;
@@ -174,11 +188,11 @@ export default function PricingAdmin() {
         const { error: activeError } = await supabase
           .from('feature_flags' as any)
           .upsert({
-            key: 'pricing_discount_active',
+            name: 'pricing_discount_active',
             description: bannerKey,
             enabled: true,
           } as any, {
-            onConflict: 'key'
+            onConflict: 'name'
           });
         
         if (activeError) throw activeError;
@@ -227,7 +241,7 @@ export default function PricingAdmin() {
       const { error } = await supabase
         .from('feature_flags' as any)
         .delete()
-        .eq('key', banner.key);
+        .eq('name', banner.key);
       
       if (error) throw error;
       
@@ -253,7 +267,7 @@ export default function PricingAdmin() {
     try {
       // Deactivate all other banners
       const updates = discountBanners.map(b => ({
-        key: b.key,
+        name: b.key, // Use name column in DB
         description: JSON.stringify({
           ...b,
           active: b.key === banner.key,
@@ -264,17 +278,17 @@ export default function PricingAdmin() {
       for (const update of updates) {
         await supabase
           .from('feature_flags' as any)
-          .upsert(update as any, { onConflict: 'key' });
+          .upsert(update as any, { onConflict: 'name' });
       }
       
       // Set active discount key
       await supabase
         .from('feature_flags' as any)
         .upsert({
-          key: 'pricing_discount_active',
+          name: 'pricing_discount_active',
           description: banner.key,
           enabled: true,
-        } as any, { onConflict: 'key' });
+        } as any, { onConflict: 'name' });
       
       toast.success(`"${banner.title}" is now active on the website`);
       loadDiscountBanners();
@@ -372,13 +386,35 @@ export default function PricingAdmin() {
     }
 
     try {
+      // Only include published field if it exists in the schema
+      // Remove published from payload temporarily if column doesn't exist
+      const payloadToSave = { ...payload };
+      
       if (editing) {
-        const { error } = await supabase.from('pricing_plans').update(payload).eq('id', editing.id);
-        if (error) throw error;
+        const { error } = await supabase.from('pricing_plans').update(payloadToSave).eq('id', editing.id);
+        if (error) {
+          // If error is about published column, try without it
+          if (error.message?.includes('published') || error.message?.includes('column')) {
+            const { published, ...payloadWithoutPublished } = payloadToSave;
+            const { error: retryError } = await supabase.from('pricing_plans').update(payloadWithoutPublished).eq('id', editing.id);
+            if (retryError) throw retryError;
+          } else {
+            throw error;
+          }
+        }
         toast.success('Plan updated');
       } else {
-        const { error } = await supabase.from('pricing_plans').insert(payload);
-        if (error) throw error;
+        const { error } = await supabase.from('pricing_plans').insert(payloadToSave);
+        if (error) {
+          // If error is about published column, try without it
+          if (error.message?.includes('published') || error.message?.includes('column')) {
+            const { published, ...payloadWithoutPublished } = payloadToSave;
+            const { error: retryError } = await supabase.from('pricing_plans').insert(payloadWithoutPublished);
+            if (retryError) throw retryError;
+          } else {
+            throw error;
+          }
+        }
         toast.success('Plan created');
       }
       setIsDialogOpen(false);
@@ -532,8 +568,12 @@ export default function PricingAdmin() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Discount Banners ({discountBanners.length})</CardTitle>
-              <Button variant="outline" onClick={loadDiscountBanners}>
-                <RefreshCw className="w-4 h-4 mr-2" />
+              <Button 
+                variant="outline" 
+                onClick={loadDiscountBanners}
+                disabled={isDiscountLoading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isDiscountLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
