@@ -268,7 +268,7 @@ export default function PrivacyPolicy() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
-                  To exercise these rights, please contact us at <a href="mailto:privacy@dubiqo.com" className="text-primary hover:underline">privacy@dubiqo.com</a>
+                  To exercise these rights, please contact us at <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a>
                 </p>
               </CardContent>
             </Card>
@@ -376,8 +376,8 @@ export default function PrivacyPolicy() {
                       please contact us:
                     </p>
                     <div className="space-y-2 text-muted-foreground">
-                      <p><strong>Email:</strong> <a href="mailto:privacy@dubiqo.com" className="text-primary hover:underline">privacy@dubiqo.com</a></p>
-                      <p><strong>Support:</strong> <a href="mailto:support@dubiqo.com" className="text-primary hover:underline">support@dubiqo.com</a></p>
+                      <p><strong>Email:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
+                      <p><strong>Support:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
                       <p><strong>Address:</strong> Dubiqo Digital Solutions, Global · Remote First</p>
                     </div>
                   </div>

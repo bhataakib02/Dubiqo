@@ -429,8 +429,8 @@ export default function Terms() {
                       For questions about these Terms of Service, please contact us:
                     </p>
                     <div className="space-y-2 text-muted-foreground">
-                      <p><strong>Email:</strong> <a href="mailto:legal@dubiqo.com" className="text-primary hover:underline">legal@dubiqo.com</a></p>
-                      <p><strong>Support:</strong> <a href="mailto:support@dubiqo.com" className="text-primary hover:underline">support@dubiqo.com</a></p>
+                      <p><strong>Email:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
+                      <p><strong>Support:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
                       <p><strong>Address:</strong> Dubiqo Digital Solutions, Global · Remote First</p>
                     </div>
                   </div>

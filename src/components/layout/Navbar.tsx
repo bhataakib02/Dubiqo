@@ -84,12 +84,11 @@ export function Navbar() {
       <div className="container mx-auto px-4 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center font-bold text-primary-foreground text-xl group-hover:glow-primary transition-all">
-            D
-          </div>
-          <span className="text-xl font-bold tracking-tight">
-            <span className="gradient-text">Dubiqo</span>
-          </span>
+          <img 
+            src="/Logo.png" 
+            alt="Dubiqo Logo" 
+            className="h-10 w-auto group-hover:opacity-80 transition-opacity"
+          />
         </Link>
 
         {/* Desktop Navigation */}

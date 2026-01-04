@@ -158,7 +158,7 @@ export const ChatWidget = () => {
         ...prev,
         {
           id: Date.now(),
-          text: "Sorry, I'm having trouble connecting right now. Please try again or contact us at support@dubiqo.com",
+          text: "Sorry, I'm having trouble connecting right now. Please try again or contact us at thefreelancer2076@gmail.com",
           isBot: true,
           timestamp: new Date(),
         },

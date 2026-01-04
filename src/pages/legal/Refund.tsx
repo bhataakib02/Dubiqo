@@ -185,7 +185,7 @@ export default function Refund() {
                         <div className="flex-1">
                           <h4 className="font-semibold mb-2 text-foreground">Submit Request</h4>
                           <p className="text-sm text-muted-foreground">
-                            Contact us at <a href="mailto:refunds@dubiqo.com" className="text-primary hover:underline">refunds@dubiqo.com</a> within 
+                            Contact us at <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a> within 
                             14 days of project completion or cancellation. Include your project details, invoice number, and reason for the refund request.
                           </p>
                         </div>
@@ -376,8 +376,8 @@ export default function Refund() {
                       For questions about our refund policy or to initiate a refund request, please contact us:
                     </p>
                     <div className="space-y-2 text-muted-foreground">
-                      <p><strong>Refund Requests:</strong> <a href="mailto:refunds@dubiqo.com" className="text-primary hover:underline">refunds@dubiqo.com</a></p>
-                      <p><strong>General Support:</strong> <a href="mailto:support@dubiqo.com" className="text-primary hover:underline">support@dubiqo.com</a></p>
+                      <p><strong>Refund Requests:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
+                      <p><strong>General Support:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
                       <p><strong>Support Portal:</strong> Visit our <a href="/support" className="text-primary hover:underline">Support Center</a></p>
                     </div>
                   </div>

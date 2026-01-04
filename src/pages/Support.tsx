@@ -170,7 +170,7 @@ export default function Support() {
         if (!user) {
           // For unauthenticated users, we must use the Edge Function
           // If Edge Function failed, we can't proceed without authentication
-          throw new Error("Please sign in to submit a support request, or the support service is temporarily unavailable. Please try again later or contact us directly at support@dubiqo.com");
+          throw new Error("Please sign in to submit a support request, or the support service is temporarily unavailable. Please try again later or contact us directly at thefreelancer2076@gmail.com");
         }
 
         // For authenticated users, use their ID as client_id
@@ -229,7 +229,7 @@ export default function Support() {
       
       if (error?.message) {
         if (error.message.includes('not available') || error.message.includes('temporarily unavailable')) {
-          errorMessage = 'Service temporarily unavailable. Please try again later or contact us directly at support@dubiqo.com';
+          errorMessage = 'Service temporarily unavailable. Please try again later or contact us directly at thefreelancer2076@gmail.com';
         } else if (error.message.includes('sign in') || error.message.includes('authentication')) {
           errorMessage = error.message;
         } else if (error.message.includes('network') || error.message.includes('fetch')) {
@@ -572,7 +572,7 @@ export default function Support() {
                   We'll respond within 24 hours
                 </p>
                 <Button variant="outline" asChild>
-                  <a href="mailto:support@dubiqo.com">Send Email</a>
+                  <a href="mailto:thefreelancer2076@gmail.com">Send Email</a>
                 </Button>
               </CardContent>
             </Card>

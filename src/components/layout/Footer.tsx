@@ -57,11 +57,11 @@ export function Footer() {
             </p>
             <div className="space-y-3">
               <a
-                href="mailto:hello@dubiqo.com"
+                href="mailto:thefreelancer2076@gmail.com"
                 className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
               >
                 <Mail className="w-4 h-4" />
-                hello@dubiqo.com
+                thefreelancer2076@gmail.com
               </a>
               <a
                 href="tel:+1234567890"
@@ -148,9 +148,14 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved.
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-muted-foreground text-sm">
+              © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved.
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Developed by Bhat Aakib
+            </p>
+          </div>
           <div className="flex items-center gap-4">
             <a
               href="https://linkedin.com/company/dubiqo"

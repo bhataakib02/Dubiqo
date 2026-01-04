@@ -620,7 +620,7 @@ export default function AdminQuotes() {
     <div class="footer">
       <p><strong>Dubiqo Digital Solutions</strong></p>
       <p>We build websites that build your business</p>
-      <p style="margin-top: 10px;">hello@dubiqo.com | +1 (234) 567-890</p>
+      <p style="margin-top: 10px;">thefreelancer2076@gmail.com | +1 (234) 567-890</p>
       <p style="margin-top: 5px; font-size: 12px; color: #999;">Quote ID: ${quote.id}</p>
     </div>
   </div>

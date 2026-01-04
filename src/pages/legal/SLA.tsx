@@ -317,7 +317,7 @@ export default function SLA() {
                           <h4 className="font-semibold text-foreground">Email Support</h4>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">
-                          <a href="mailto:support@dubiqo.com" className="text-primary hover:underline">support@dubiqo.com</a>
+                          <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a>
                         </p>
                         <p className="text-xs text-muted-foreground">Primary channel for all support requests</p>
                       </div>
@@ -403,7 +403,7 @@ export default function SLA() {
                       <h4 className="font-semibold mb-2 text-foreground">Request Escalation</h4>
                       <p className="text-sm text-muted-foreground">
                         Reply to your support thread with "ESCALATE" in the subject line, or contact us directly at 
-                        <a href="mailto:support@dubiqo.com" className="text-primary hover:underline ml-1">support@dubiqo.com</a>
+                        <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline ml-1">thefreelancer2076@gmail.com</a>
                       </p>
                     </div>
                   </div>
@@ -504,7 +504,7 @@ export default function SLA() {
                       For support inquiries, questions about this SLA, or to report an issue:
                     </p>
                     <div className="space-y-2 text-muted-foreground mb-4">
-                      <p><strong>Email:</strong> <a href="mailto:support@dubiqo.com" className="text-primary hover:underline">support@dubiqo.com</a></p>
+                      <p><strong>Email:</strong> <a href="mailto:thefreelancer2076@gmail.com" className="text-primary hover:underline">thefreelancer2076@gmail.com</a></p>
                       <p><strong>Support Portal:</strong> <Link to="/support" className="text-primary hover:underline">Visit Support Center</Link></p>
                       <p><strong>Phone:</strong> Available for maintenance plan clients</p>
                     </div>
