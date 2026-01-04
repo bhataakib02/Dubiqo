@@ -44,12 +44,11 @@ export function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center font-bold text-primary-foreground text-xl">
-                D
-              </div>
-              <span className="text-xl font-bold">
-                <span className="gradient-text">Dubiqo</span>
-              </span>
+              <img 
+                src="/Logo.png" 
+                alt="Dubiqo Logo" 
+                className="h-10 w-auto"
+              />
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               We build websites that build your business. Modern digital solutions for the modern
@@ -148,14 +147,9 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-muted-foreground text-sm">
-              © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved.
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Developed by Bhat Aakib
-            </p>
-          </div>
+          <p className="text-muted-foreground text-sm text-center md:text-left">
+            © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved. Developed by Bhat Aakib
+          </p>
           <div className="flex items-center gap-4">
             <a
               href="https://linkedin.com/company/dubiqo"
