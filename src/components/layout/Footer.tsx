@@ -44,11 +44,13 @@ export function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img 
-                src="/Logo.png" 
-                alt="Dubiqo Logo" 
-                className="h-16 w-auto"
-              />
+              <div className="border border-gray-800 rounded-lg p-2 bg-white">
+                <img 
+                  src="/Logo.png" 
+                  alt="Dubiqo Logo" 
+                  className="h-14 w-auto"
+                />
+              </div>
             </Link>
             <p className="text-muted-foreground mb-6 max-w-xs">
               We build websites that build your business. Modern digital solutions for the modern
@@ -146,35 +148,33 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-            <p className="text-muted-foreground text-sm text-center md:text-left">
-              © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4">
-              <a
-                href="https://linkedin.com/company/dubiqo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a
-                href="https://twitter.com/dubiqo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
-          <p className="text-muted-foreground text-sm text-center">
+        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center gap-4">
+          <p className="text-muted-foreground text-sm md:text-left flex-1">
+            © {new Date().getFullYear()} Dubiqo Digital Solutions. All rights reserved.
+          </p>
+          <p className="text-muted-foreground text-sm text-center flex-1">
             Developed by Bhat Aakib
           </p>
+          <div className="flex items-center gap-4 flex-1 justify-end">
+            <a
+              href="https://linkedin.com/company/dubiqo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-colors"
+              aria-label="LinkedIn"
+            >
+              <Linkedin className="w-5 h-5" />
+            </a>
+            <a
+              href="https://twitter.com/dubiqo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-colors"
+              aria-label="Twitter"
+            >
+              <Twitter className="w-5 h-5" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
