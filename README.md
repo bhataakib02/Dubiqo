@@ -6,6 +6,8 @@
 
 **Empowering Innovation, Accelerating Success Every Step**
 
+👉 [Visit Dubiqo](https://dubiqo.vercel.app/)
+
 *We build websites that build your business.*
 
 [![Last Commit](https://img.shields.io/github/last-commit/bhataakib02/Dubiqo?style=flat&logo=git&logoColor=white&color=4c4c4c)](https://github.com/bhataakib02/Dubiqo)
@@ -44,11 +46,10 @@
 ---
 
 ## 🎯 Overview
-
 **Dubiqo** is a complete, production-ready, enterprise-grade digital solutions platform built with modern web technologies. It provides a comprehensive system for managing client projects, quotes, bookings, invoices, support tickets, and content management.  
 
-🔗 **Live Link:**  
-👉 [Visit Dubiqo](https://dubiqo.vercel.app/)
+🔗 **Live Link:** (https://dubiqo.vercel.app/) 
+
 ### Key Highlights
 
 - ✅ **Production Ready** - Fully functional enterprise platform
@@ -552,11 +553,6 @@ npm run build
 ---
 
 ## 📝 Important Notes
-
-### Removed Features
-
-- ❌ **Careers Module** - Completely removed as per requirements
-- ❌ No job listings, applications, or related functionality
 
 ### Development vs Production
 
