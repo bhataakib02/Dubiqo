@@ -510,19 +510,6 @@ npm run build
 - ✅ CSRF protection
 
 ---
-
-## 👨‍💼 Admin Portal
-
-### Access
-
-The admin portal is **completely hidden** from public access:
-
-- ❌ No links in navigation
-- ❌ Not in sitemap
-- ❌ Blocked in robots.txt
-- ❌ Requires direct URL + authentication
-- ✅ Only accessible at `/admin/*` paths
-
 ### Features
 
 #### Dashboard
