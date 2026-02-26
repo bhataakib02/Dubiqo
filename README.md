@@ -45,8 +45,10 @@
 
 ## 🎯 Overview
 
-**Dubiqo** is a complete, production-ready, enterprise-grade digital solutions platform built with modern web technologies. It provides a comprehensive system for managing client projects, quotes, bookings, invoices, support tickets, and content management.
-**Live Link :-** https://dubiqo.vercel.app/
+**Dubiqo** is a complete, production-ready, enterprise-grade digital solutions platform built with modern web technologies. It provides a comprehensive system for managing client projects, quotes, bookings, invoices, support tickets, and content management.  
+
+🔗 **Live Link:**  
+👉 [Visit Dubiqo](https://dubiqo.vercel.app/)
 ### Key Highlights
 
 - ✅ **Production Ready** - Fully functional enterprise platform
